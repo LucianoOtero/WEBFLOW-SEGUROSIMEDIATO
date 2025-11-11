@@ -32,12 +32,6 @@ function renderEmailTemplateModal($dados) {
     // Verificar se há erro
     $temErro = isset($dados['erro']) && $dados['erro'] !== null;
     
-    // Lógica condicional: Trocar ❌ por ✅ quando descrição é "Submissão Completa - Todos os Dados"
-    $emojiFinal = $momento_emoji;
-    if ($momento_descricao === 'Submissão Completa - Todos os Dados' && $momento_emoji === '❌') {
-        $emojiFinal = '✅';
-    }
-    
     // Cor do banner baseada em erro ou momento
     if ($temErro) {
         $bannerColor = '#F44336'; // Vermelho para erro
@@ -75,10 +69,10 @@ function renderEmailTemplateModal($dados) {
     <body>
         <div class="container">
             <div class="header">
-                <h2>📱 Novo Contato pelo Formulário do Whatsapp</h2>
+                <h2>📱 Novo Contato - Modal WhatsApp</h2>
             </div>
             <div class="banner" style="background-color: ' . $bannerColor . '; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
-                ' . $emojiFinal . ' ' . $momento_descricao . '
+                ' . $momento_emoji . ' ' . $momento_descricao . '
             </div>
             <div class="content">
                 <div class="highlight">
@@ -152,8 +146,8 @@ function renderEmailTemplateModal($dados) {
 
     // Texto simples (fallback)
     $text = "
-Novo Contato pelo Formulário do Whatsapp
-========================================
+Novo Contato - Modal WhatsApp
+============================
 
 Um cliente preencheu o telefone corretamente no modal WhatsApp.
 " . ($temErro ? "\n⚠️ ERRO: O envio ao EspoCRM falhou!\n" : "") . "

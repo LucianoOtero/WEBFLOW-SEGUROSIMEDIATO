@@ -68,7 +68,7 @@ function renderEmailTemplatePrimeiroContato($dados) {
     <body>
         <div class="container">
             <div class="header">
-                <h2>📱 Novo Contato - Modal WhatsApp</h2>
+                <h2>📱 Novo Contato pelo Formulário do Whatsapp</h2>
             </div>
             <div class="banner" style="background-color: ' . $bannerColor . '; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
                 ' . $momento_emoji . ' ' . $momento_descricao . '
@@ -130,8 +130,8 @@ function renderEmailTemplatePrimeiroContato($dados) {
 
     // Texto simples (fallback)
     $text = "
-Novo Contato - Modal WhatsApp
-============================
+Novo Contato pelo Formulário do Whatsapp
+========================================
 
 Um cliente preencheu o telefone corretamente no modal WhatsApp.
 " . ($temErro ? "\n⚠️ ERRO: O envio ao EspoCRM falhou!\n" : "") . "

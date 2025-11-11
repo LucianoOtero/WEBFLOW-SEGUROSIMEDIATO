@@ -1,14 +1,16 @@
 <?php
 /**
- * TEMPLATE DE EMAIL - MODAL WHATSAPP
+ * TEMPLATE DE EMAIL - PRIMEIRO CONTATO (APENAS TELEFONE)
  * 
- * Template para notificações do modal WhatsApp
- * Exibe dados do cliente (telefone, nome, CPF, etc.)
+ * Template simplificado para notificações do primeiro contato via modal WhatsApp
+ * Exibe apenas dados básicos: telefone, nome, email, GCLID
+ * 
+ * ⚠️ NÃO exibe: CPF, CEP, PLACA (campos não informados no primeiro contato)
  * 
  * @param array $dados Dados do cliente e momento
  * @return array ['subject' => string, 'html' => string, 'text' => string]
  */
-function renderEmailTemplateModal($dados) {
+function renderEmailTemplatePrimeiroContato($dados) {
     // Preparar dados
     $ddd = $dados['ddd'] ?? '';
     $celular = $dados['celular'] ?? '';
@@ -16,33 +18,24 @@ function renderEmailTemplateModal($dados) {
         ? '(' . $ddd . ') ' . $celular
         : 'Não informado';
 
-    $cpf = $dados['cpf'] ?? 'Não informado';
     $nome = $dados['nome'] ?? 'Não informado';
     $emailCliente = $dados['email'] ?? 'Não informado';
-    $cep = $dados['cep'] ?? 'Não informado';
-    $placa = $dados['placa'] ?? 'Não informado';
     $gclid = $dados['gclid'] ?? 'Não informado';
     $dataHora = date('d/m/Y H:i:s');
 
     // Identificadores visuais do momento
-    $momento_emoji = $dados['momento_emoji'] ?? '📧';
-    $momento_descricao = $dados['momento_descricao'] ?? 'Notificação';
-    $momento = $dados['momento'] ?? 'unknown';
+    $momento_emoji = $dados['momento_emoji'] ?? '📞';
+    $momento_descricao = $dados['momento_descricao'] ?? 'Primeiro Contato - Apenas Telefone';
+    $momento = $dados['momento'] ?? 'initial';
     
     // Verificar se há erro
     $temErro = isset($dados['erro']) && $dados['erro'] !== null;
-    
-    // Lógica condicional: Trocar ❌ por ✅ quando descrição é "Submissão Completa - Todos os Dados"
-    $emojiFinal = $momento_emoji;
-    if ($momento_descricao === 'Submissão Completa - Todos os Dados' && $momento_emoji === '❌') {
-        $emojiFinal = '✅';
-    }
     
     // Cor do banner baseada em erro ou momento
     if ($temErro) {
         $bannerColor = '#F44336'; // Vermelho para erro
     } else {
-        $bannerColor = ($momento === 'initial') ? '#2196F3' : '#4CAF50'; // Azul para INITIAL, Verde para UPDATE
+        $bannerColor = ($momento === 'initial' || $momento === 'initial_error') ? '#2196F3' : '#4CAF50'; // Azul para INITIAL, Verde para outros
     }
 
     // Assunto do email
@@ -75,10 +68,10 @@ function renderEmailTemplateModal($dados) {
     <body>
         <div class="container">
             <div class="header">
-                <h2>📱 Novo Contato pelo Formulário do Whatsapp</h2>
+                <h2>📱 Novo Contato - Modal WhatsApp</h2>
             </div>
             <div class="banner" style="background-color: ' . $bannerColor . '; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
-                ' . $emojiFinal . ' ' . $momento_descricao . '
+                ' . $momento_emoji . ' ' . $momento_descricao . '
             </div>
             <div class="content">
                 <div class="highlight">
@@ -96,23 +89,8 @@ function renderEmailTemplateModal($dados) {
                 </div>
                 
                 <div class="field">
-                    <span class="label">🆔 CPF:</span>
-                    <span class="value">' . htmlspecialchars($cpf) . '</span>
-                </div>
-                
-                <div class="field">
                     <span class="label">📧 Email:</span>
                     <span class="value">' . htmlspecialchars($emailCliente) . '</span>
-                </div>
-                
-                <div class="field">
-                    <span class="label">📍 CEP:</span>
-                    <span class="value">' . htmlspecialchars($cep) . '</span>
-                </div>
-                
-                <div class="field">
-                    <span class="label">🚗 Placa:</span>
-                    <span class="value">' . htmlspecialchars($placa) . '</span>
                 </div>
                 
                 <div class="field">
@@ -152,18 +130,15 @@ function renderEmailTemplateModal($dados) {
 
     // Texto simples (fallback)
     $text = "
-Novo Contato pelo Formulário do Whatsapp
-========================================
+Novo Contato - Modal WhatsApp
+============================
 
 Um cliente preencheu o telefone corretamente no modal WhatsApp.
 " . ($temErro ? "\n⚠️ ERRO: O envio ao EspoCRM falhou!\n" : "") . "
 
 Telefone: {$telefoneCompleto}
 Nome: {$nome}
-CPF: {$cpf}
 Email: {$emailCliente}
-CEP: {$cep}
-Placa: {$placa}
 GCLID: {$gclid}
 " . ($temErro ? "ERRO: " . ($dados['erro']['message'] ?? 'Erro desconhecido') . "\n" : "") . "
 Data/Hora: {$dataHora}
