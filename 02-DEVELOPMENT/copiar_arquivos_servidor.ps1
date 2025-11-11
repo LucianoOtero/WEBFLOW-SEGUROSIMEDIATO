@@ -52,8 +52,18 @@ $arquivosPHPDev = @(
 $arquivosAdicionaisDev = @(
     "ProfessionalLogger.php",
     "log_endpoint.php",
-    "email_template_loader.php",
-    "aws_ses_config.php"
+    "email_template_loader.php"
+    # ⚠️ aws_ses_config.php REMOVIDO - NÃO copiar automaticamente
+    # Use: .\copiar_aws_ses_config_servidor.ps1 (com verificação de segurança)
+    # Motivo: Arquivo modificado para usar variáveis de ambiente
+    #         Requer verificação antes de copiar para não quebrar servidor
+)
+
+# ⚠️ ARQUIVOS EXCLUÍDOS DO DEPLOY AUTOMÁTICO (contêm credenciais ou são específicos do servidor)
+$arquivosExcluidos = @(
+    "aws_ses_config.php",  # Contém credenciais - usar script específico
+    ".env.local",           # Arquivo local com credenciais
+    "CREDENCIAIS_AWS_REFERENCIA.txt"  # Arquivo de referência local
 )
 
 # Arquivos JS para DEV

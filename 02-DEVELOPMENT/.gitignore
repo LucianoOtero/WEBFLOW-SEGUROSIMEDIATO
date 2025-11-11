@@ -1,0 +1,17 @@
+# Arquivos com credenciais sensíveis
+.env.local
+.env
+*.env.local
+*.env
+
+# Arquivos de configuração com credenciais
+aws_ses_config.php
+*_ses_config*.php
+
+# Arquivo de referência local de credenciais
+CREDENCIAIS_AWS_REFERENCIA.txt
+
+# Backups com credenciais
+**/backups/**/aws_ses_config*.php
+**/backups/**/*_ses_config*.php
+

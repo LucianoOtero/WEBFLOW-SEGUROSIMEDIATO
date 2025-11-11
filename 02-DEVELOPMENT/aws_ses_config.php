@@ -14,10 +14,26 @@
 // ======================
 // CREDENCIAIS AWS SES
 // ======================
+// Prioridade: Variáveis de ambiente > .env.local > valores padrão
 
-define('AWS_ACCESS_KEY_ID', '[REMOVED_FOR_SECURITY]');
-define('AWS_SECRET_ACCESS_KEY', '[REMOVED_FOR_SECURITY]');
-define('AWS_REGION', 'sa-east-1'); // Verificar qual região você escolheu no SES
+// Tentar carregar de .env.local se existir (apenas localmente)
+if (file_exists(__DIR__ . '/.env.local')) {
+    $envFile = parse_ini_file(__DIR__ . '/.env.local');
+    if (isset($envFile['AWS_ACCESS_KEY_ID'])) {
+        $_ENV['AWS_ACCESS_KEY_ID'] = $envFile['AWS_ACCESS_KEY_ID'];
+    }
+    if (isset($envFile['AWS_SECRET_ACCESS_KEY'])) {
+        $_ENV['AWS_SECRET_ACCESS_KEY'] = $envFile['AWS_SECRET_ACCESS_KEY'];
+    }
+    if (isset($envFile['AWS_REGION'])) {
+        $_ENV['AWS_REGION'] = $envFile['AWS_REGION'];
+    }
+}
+
+// Usar variáveis de ambiente se disponíveis, senão usar valores padrão
+define('AWS_ACCESS_KEY_ID', $_ENV['AWS_ACCESS_KEY_ID'] ?? '[CONFIGURE_VARIAVEL_AMBIENTE]');
+define('AWS_SECRET_ACCESS_KEY', $_ENV['AWS_SECRET_ACCESS_KEY'] ?? '[CONFIGURE_VARIAVEL_AMBIENTE]');
+define('AWS_REGION', $_ENV['AWS_REGION'] ?? 'sa-east-1');
 
 // ======================
 // CONFIGURAÇÃO DE EMAIL
