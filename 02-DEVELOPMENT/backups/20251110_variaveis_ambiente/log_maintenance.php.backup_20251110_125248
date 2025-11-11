@@ -1,0 +1,145 @@
+<?php
+/**
+ * log_maintenance.php - Scripts de Manutenção de Logs
+ * Versão: 1.0.0
+ * Data: 2025-11-08
+ * 
+ * Script para arquivamento, limpeza e otimização de logs
+ * Deve ser executado via cron diariamente
+ * 
+ * Uso: php log_maintenance.php [archive|cleanup|optimize|all]
+ */
+
+// Permitir execução apenas via CLI ou com autenticação
+if (php_sapi_name() !== 'cli' && !isset($_GET['key']) || $_GET['key'] !== ($_ENV['LOG_MAINTENANCE_KEY'] ?? 'change_this_key')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Forbidden']);
+    exit;
+}
+
+require_once __DIR__ . '/ProfessionalLogger.php';
+
+$action = $argv[1] ?? $_GET['action'] ?? 'all';
+
+try {
+    $logger = new ProfessionalLogger();
+    $pdo = $logger->getConnection();
+    
+    if ($pdo === null) {
+        throw new Exception('Database connection failed');
+    }
+    
+    $results = [];
+    
+    // Arquivar logs antigos
+    if ($action === 'archive' || $action === 'all') {
+        $archiveDays = (int)($_ENV['LOG_ARCHIVE_DAYS'] ?? 30);
+        
+        $sql = "
+            INSERT INTO application_logs_archive
+            SELECT * FROM application_logs
+            WHERE timestamp < DATE_SUB(NOW(6), INTERVAL :days DAY)
+        ";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':days' => $archiveDays]);
+        $archived = $stmt->rowCount();
+        
+        if ($archived > 0) {
+            $deleteSql = "
+                DELETE FROM application_logs
+                WHERE timestamp < DATE_SUB(NOW(6), INTERVAL :days DAY)
+            ";
+            $deleteStmt = $pdo->prepare($deleteSql);
+            $deleteStmt->execute([':days' => $archiveDays]);
+        }
+        
+        $results['archive'] = [
+            'archived' => $archived,
+            'days' => $archiveDays
+        ];
+    }
+    
+    // Limpar logs antigos (conforme retenção)
+    if ($action === 'cleanup' || $action === 'all') {
+        // Obter configurações de retenção
+        $configSql = "SELECT config_key, config_value FROM log_config WHERE config_key LIKE 'retention_days_%'";
+        $configStmt = $pdo->query($configSql);
+        $retention = [];
+        while ($row = $configStmt->fetch(PDO::FETCH_ASSOC)) {
+            $level = str_replace('retention_days_', '', $row['config_key']);
+            $retention[strtoupper($level)] = (int)$row['config_value'];
+        }
+        
+        $cleaned = 0;
+        foreach ($retention as $level => $days) {
+            $sql = "
+                DELETE FROM application_logs_archive
+                WHERE level = :level AND timestamp < DATE_SUB(NOW(6), INTERVAL :days DAY)
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':level' => $level, ':days' => $days]);
+            $cleaned += $stmt->rowCount();
+        }
+        
+        $results['cleanup'] = [
+            'cleaned' => $cleaned,
+            'retention' => $retention
+        ];
+    }
+    
+    // Otimizar tabelas
+    if ($action === 'optimize' || $action === 'all') {
+        $pdo->exec('OPTIMIZE TABLE application_logs');
+        $pdo->exec('OPTIMIZE TABLE application_logs_archive');
+        
+        $results['optimize'] = ['status' => 'completed'];
+    }
+    
+    // Gerar estatísticas
+    if ($action === 'stats' || $action === 'all') {
+        $sql = "
+            INSERT INTO log_statistics (date, level, count, file_name, environment)
+            SELECT 
+                DATE(timestamp) as date,
+                level,
+                COUNT(*) as count,
+                file_name,
+                environment
+            FROM application_logs
+            WHERE DATE(timestamp) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+            GROUP BY DATE(timestamp), level, file_name, environment
+            ON DUPLICATE KEY UPDATE count = VALUES(count)
+        ";
+        $pdo->exec($sql);
+        
+        $results['stats'] = ['status' => 'generated'];
+    }
+    
+    // Output
+    if (php_sapi_name() === 'cli') {
+        echo "Maintenance completed:\n";
+        echo json_encode($results, JSON_PRETTY_PRINT) . "\n";
+    } else {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'results' => $results
+        ], JSON_PRETTY_PRINT);
+    }
+    
+} catch (Exception $e) {
+    error_log("log_maintenance.php error: " . $e->getMessage());
+    
+    if (php_sapi_name() === 'cli') {
+        echo "Error: " . $e->getMessage() . "\n";
+    } else {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+    exit(1);
+}
+

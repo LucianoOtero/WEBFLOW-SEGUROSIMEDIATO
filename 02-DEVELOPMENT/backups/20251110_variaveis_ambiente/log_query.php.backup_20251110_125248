@@ -1,0 +1,230 @@
+<?php
+/**
+ * log_query.php - API de Consulta de Logs
+ * Versão: 1.0.0
+ * Data: 2025-11-08
+ * 
+ * API RESTful para consulta de logs com filtros avançados
+ */
+
+// Headers CORS
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
+
+// Responder a requisições OPTIONS (preflight)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit(0);
+}
+
+// Verificar método HTTP
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Method not allowed',
+        'method' => $_SERVER['REQUEST_METHOD']
+    ]);
+    exit;
+}
+
+// Incluir classe ProfessionalLogger para conexão
+require_once __DIR__ . '/ProfessionalLogger.php';
+
+try {
+    // Obter parâmetros de query
+    $params = [
+        'start_date' => $_GET['start_date'] ?? null,
+        'end_date' => $_GET['end_date'] ?? null,
+        'level' => $_GET['level'] ?? null,
+        'category' => $_GET['category'] ?? null,
+        'file_name' => $_GET['file_name'] ?? null,
+        'line_number' => $_GET['line_number'] ?? null,
+        'function_name' => $_GET['function_name'] ?? null,
+        'search' => $_GET['search'] ?? null,
+        'session_id' => $_GET['session_id'] ?? null,
+        'request_id' => $_GET['request_id'] ?? null,
+        'environment' => $_GET['environment'] ?? null,
+        'tags' => $_GET['tags'] ?? null,
+        'page' => max(1, (int)($_GET['page'] ?? 1)),
+        'limit' => min(1000, max(1, (int)($_GET['limit'] ?? 100))),
+        'sort' => $_GET['sort'] ?? 'timestamp',
+        'order' => strtoupper($_GET['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC'
+    ];
+    
+    // Validar campos de ordenação
+    $allowedSortFields = ['id', 'timestamp', 'level', 'category', 'file_name', 'line_number'];
+    if (!in_array($params['sort'], $allowedSortFields)) {
+        $params['sort'] = 'timestamp';
+    }
+    
+    // Conectar ao banco
+    $logger = new ProfessionalLogger();
+    $pdo = $logger->getConnection();
+    
+    if ($pdo === null) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database connection failed'
+        ]);
+        exit;
+    }
+    
+    // Construir query
+    $where = [];
+    $bindings = [];
+    
+    // Filtro de data
+    if ($params['start_date']) {
+        $where[] = "timestamp >= :start_date";
+        $bindings[':start_date'] = $params['start_date'];
+    }
+    if ($params['end_date']) {
+        $where[] = "timestamp <= :end_date";
+        $bindings[':end_date'] = $params['end_date'];
+    }
+    
+    // Filtro de nível
+    if ($params['level']) {
+        $validLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'];
+        if (in_array(strtoupper($params['level']), $validLevels)) {
+            $where[] = "level = :level";
+            $bindings[':level'] = strtoupper($params['level']);
+        }
+    }
+    
+    // Filtro de categoria
+    if ($params['category']) {
+        $where[] = "category = :category";
+        $bindings[':category'] = $params['category'];
+    }
+    
+    // Filtro de arquivo
+    if ($params['file_name']) {
+        $where[] = "file_name LIKE :file_name";
+        $bindings[':file_name'] = '%' . $params['file_name'] . '%';
+    }
+    
+    // Filtro de linha
+    if ($params['line_number']) {
+        $where[] = "line_number = :line_number";
+        $bindings[':line_number'] = (int)$params['line_number'];
+    }
+    
+    // Filtro de função
+    if ($params['function_name']) {
+        $where[] = "function_name = :function_name";
+        $bindings[':function_name'] = $params['function_name'];
+    }
+    
+    // Busca full-text
+    if ($params['search']) {
+        $where[] = "MATCH(message) AGAINST(:search IN BOOLEAN MODE)";
+        $bindings[':search'] = $params['search'];
+    }
+    
+    // Filtro de sessão
+    if ($params['session_id']) {
+        $where[] = "session_id = :session_id";
+        $bindings[':session_id'] = $params['session_id'];
+    }
+    
+    // Filtro de request
+    if ($params['request_id']) {
+        $where[] = "request_id = :request_id";
+        $bindings[':request_id'] = $params['request_id'];
+    }
+    
+    // Filtro de ambiente
+    if ($params['environment']) {
+        $where[] = "environment = :environment";
+        $bindings[':environment'] = $params['environment'];
+    }
+    
+    // Construir WHERE clause
+    $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+    
+    // Query para contar total
+    $countSql = "SELECT COUNT(*) as total FROM application_logs $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($bindings);
+    $total = $countStmt->fetch()['total'];
+    
+    // Query para buscar logs
+    $offset = ($params['page'] - 1) * $params['limit'];
+    $sql = "
+        SELECT 
+            id, log_id, request_id, timestamp, client_timestamp, server_time,
+            level, category, file_name, file_path, line_number,
+            function_name, class_name, message, data, stack_trace,
+            url, session_id, user_id, ip_address, user_agent,
+            environment, server_name, metadata, tags
+        FROM application_logs
+        $whereClause
+        ORDER BY {$params['sort']} {$params['order']}
+        LIMIT :limit OFFSET :offset
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    
+    // Bindings adicionais
+    $bindings[':limit'] = $params['limit'];
+    $bindings[':offset'] = $offset;
+    
+    // Executar query
+    foreach ($bindings as $key => $value) {
+        $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    
+    $stmt->execute();
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Processar dados JSON
+    foreach ($logs as &$log) {
+        if ($log['data']) {
+            $log['data'] = json_decode($log['data'], true);
+        }
+        if ($log['metadata']) {
+            $log['metadata'] = json_decode($log['metadata'], true);
+        }
+    }
+    
+    // Calcular paginação
+    $totalPages = ceil($total / $params['limit']);
+    
+    // Resposta
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'data' => $logs,
+        'pagination' => [
+            'page' => $params['page'],
+            'limit' => $params['limit'],
+            'total' => $total,
+            'total_pages' => $totalPages
+        ],
+        'filters_applied' => array_filter([
+            'start_date' => $params['start_date'],
+            'end_date' => $params['end_date'],
+            'level' => $params['level'],
+            'category' => $params['category'],
+            'file_name' => $params['file_name'],
+            'line_number' => $params['line_number'],
+            'search' => $params['search']
+        ])
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    
+} catch (Exception $e) {
+    error_log("log_query.php error: " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Internal server error',
+        'message' => 'An error occurred while querying logs'
+    ]);
+}
+

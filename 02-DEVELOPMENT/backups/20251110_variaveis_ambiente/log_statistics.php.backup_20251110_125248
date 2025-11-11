@@ -1,0 +1,129 @@
+<?php
+/**
+ * log_statistics.php - API de Estatísticas de Logs
+ * Versão: 1.0.0
+ * Data: 2025-11-08
+ * 
+ * Retorna estatísticas agregadas dos logs
+ */
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit(0);
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    exit;
+}
+
+require_once __DIR__ . '/ProfessionalLogger.php';
+
+try {
+    $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
+    $endDate = $_GET['end_date'] ?? date('Y-m-d');
+    $groupBy = $_GET['group_by'] ?? 'level';
+    $environment = $_GET['environment'] ?? null;
+    
+    $logger = new ProfessionalLogger();
+    $pdo = $logger->getConnection();
+    
+    if ($pdo === null) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+        exit;
+    }
+    
+    $where = ["timestamp >= :start_date", "timestamp <= :end_date"];
+    $bindings = [':start_date' => $startDate, ':end_date' => $endDate . ' 23:59:59'];
+    
+    if ($environment) {
+        $where[] = "environment = :environment";
+        $bindings[':environment'] = $environment;
+    }
+    
+    $whereClause = 'WHERE ' . implode(' AND ', $where);
+    
+    // Estatísticas por nível
+    $sqlByLevel = "
+        SELECT level, COUNT(*) as count
+        FROM application_logs
+        $whereClause
+        GROUP BY level
+        ORDER BY count DESC
+    ";
+    $stmt = $pdo->prepare($sqlByLevel);
+    $stmt->execute($bindings);
+    $byLevel = [];
+    $total = 0;
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $byLevel[$row['level']] = (int)$row['count'];
+        $total += (int)$row['count'];
+    }
+    
+    // Estatísticas por categoria
+    $sqlByCategory = "
+        SELECT category, COUNT(*) as count
+        FROM application_logs
+        $whereClause AND category IS NOT NULL
+        GROUP BY category
+        ORDER BY count DESC
+        LIMIT 10
+    ";
+    $stmt = $pdo->prepare($sqlByCategory);
+    $stmt->execute($bindings);
+    $byCategory = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $byCategory[$row['category']] = (int)$row['count'];
+    }
+    
+    // Top 10 arquivos com mais logs
+    $sqlTopFiles = "
+        SELECT 
+            file_name,
+            COUNT(*) as count,
+            SUM(CASE WHEN level IN ('ERROR', 'FATAL') THEN 1 ELSE 0 END) as errors
+        FROM application_logs
+        $whereClause
+        GROUP BY file_name
+        ORDER BY count DESC
+        LIMIT 10
+    ";
+    $stmt = $pdo->prepare($sqlTopFiles);
+    $stmt->execute($bindings);
+    $topFiles = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $topFiles[] = [
+            'file_name' => $row['file_name'],
+            'count' => (int)$row['count'],
+            'errors' => (int)$row['errors']
+        ];
+    }
+    
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'statistics' => [
+            'total' => $total,
+            'by_level' => $byLevel,
+            'by_category' => $byCategory,
+            'top_files' => $topFiles
+        ],
+        'period' => [
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]
+    ], JSON_UNESCAPED_UNICODE);
+    
+} catch (Exception $e) {
+    error_log("log_statistics.php error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Internal server error']);
+}
+

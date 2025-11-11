@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Testes CORS Específicos para Webflow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .info-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .info-section h2 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .test-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s;
+        }
+        
+        .test-item.running {
+            border-left-color: #ffc107;
+            background: #fff9e6;
+        }
+        
+        .test-item.success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .test-item.error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .test-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .test-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .status-running {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .status-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .status-error {
+            background: #f44336;
+            color: white;
+        }
+        
+        .test-details {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+        }
+        
+        .btn-success:hover {
+            background: #45a049;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+        }
+        
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .summary h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Testes CORS Específicos para Webflow</h1>
+        <p class="subtitle">Validação completa de CORS para acesso do custom code do Webflow em segurosimediato-dev.webflow.io</p>
+        
+        <div class="info-section">
+            <h2>ℹ️ Informações do Teste</h2>
+            <p><strong>Origem Webflow:</strong> <code>https://segurosimediato-dev.webflow.io</code></p>
+            <p><strong>Servidor DEV:</strong> <code>https://dev.bssegurosimediato.com.br</code></p>
+            <p><strong>Endpoints Testados:</strong> <code>log_endpoint.php</code>, <code>add_flyingdonkeys.php</code>, <code>add_webflow_octa.php</code></p>
+            <p><strong>Objetivo:</strong> Garantir que origens não autorizadas NÃO recebam headers CORS e que a origem Webflow funcione corretamente.</p>
+        </div>
+        
+        <div class="summary">
+            <h2>📊 Resumo dos Testes</h2>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTestes">0</div>
+                    <div class="stat-label">Total de Testes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="testesSucesso" style="color: #4caf50;">0</div>
+                    <div class="stat-label">Sucesso</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="testesErro" style="color: #f44336;">0</div>
+                    <div class="stat-label">Erros</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="testesPendentes" style="color: #ffc107;">0</div>
+                    <div class="stat-label">Pendentes</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <button class="btn btn-success" onclick="executarTodosTestes()">▶️ Executar Todos os Testes</button>
+            <button class="btn" onclick="limparResultados()">🗑️ Limpar Resultados</button>
+            <button class="btn" onclick="exportarRelatorio()">📊 Exportar Relatório</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔐 Teste 1: CORS - Origem Webflow Permitida (OPTIONS)</h2>
+            <div id="testes-origem-permitida"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🚫 Teste 2: CORS - Origem NÃO Permitida (OPTIONS)</h2>
+            <div id="testes-origem-nao-permitida"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📤 Teste 3: Requisição POST Real do Webflow</h2>
+            <div id="testes-post-real"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔄 Teste 4: Fluxo Completo OPTIONS → POST</h2>
+            <div id="testes-fluxo-completo"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>✅ Teste 5: Validação de Múltiplos Endpoints</h2>
+            <div id="testes-multiplos-endpoints"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuração
+        const config = {
+            urlBase: 'https://dev.bssegurosimediato.com.br',
+            origemWebflow: 'https://segurosimediato-dev.webflow.io',
+            origemNaoPermitida: 'https://evil-site.com'
+        };
+        
+        // Endpoints que validam CORS
+        const endpointsValidados = [
+            { nome: 'log_endpoint.php', metodo: 'POST', headers: ['X-API-Key', 'X-Client-Timestamp'] },
+            { nome: 'add_flyingdonkeys.php', metodo: 'POST', headers: ['X-Webflow-Signature', 'X-Webflow-Timestamp'] },
+            { nome: 'add_webflow_octa.php', metodo: 'POST', headers: ['X-Webflow-Signature', 'X-Webflow-Timestamp'] }
+        ];
+        
+        // Resultados dos testes
+        const resultados = {
+            origemPermitida: {},
+            origemNaoPermitida: {},
+            postReal: {},
+            fluxoCompleto: {},
+            multiplosEndpoints: {}
+        };
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            criarEstruturaTestes();
+        });
+        
+        // Criar estrutura de testes
+        function criarEstruturaTestes() {
+            // Teste 1: Origem Permitida
+            const container1 = document.getElementById('testes-origem-permitida');
+            endpointsValidados.forEach(endpoint => {
+                const id = `test-origem-permitida-${endpoint.nome}`;
+                container1.innerHTML += `
+                    <div class="test-item" id="${id}">
+                        <div class="test-header">
+                            <span class="test-title">${endpoint.nome}</span>
+                            <span class="test-status status-pending">Pendente</span>
+                        </div>
+                        <div class="test-details" style="display: none;"></div>
+                    </div>
+                `;
+            });
+            
+            // Teste 2: Origem NÃO Permitida
+            const container2 = document.getElementById('testes-origem-nao-permitida');
+            endpointsValidados.forEach(endpoint => {
+                const id = `test-origem-nao-permitida-${endpoint.nome}`;
+                container2.innerHTML += `
+                    <div class="test-item" id="${id}">
+                        <div class="test-header">
+                            <span class="test-title">${endpoint.nome}</span>
+                            <span class="test-status status-pending">Pendente</span>
+                        </div>
+                        <div class="test-details" style="display: none;"></div>
+                    </div>
+                `;
+            });
+            
+            // Teste 3: POST Real
+            const container3 = document.getElementById('testes-post-real');
+            endpointsValidados.forEach(endpoint => {
+                const id = `test-post-real-${endpoint.nome}`;
+                container3.innerHTML += `
+                    <div class="test-item" id="${id}">
+                        <div class="test-header">
+                            <span class="test-title">${endpoint.nome}</span>
+                            <span class="test-status status-pending">Pendente</span>
+                        </div>
+                        <div class="test-details" style="display: none;"></div>
+                    </div>
+                `;
+            });
+            
+            // Teste 4: Fluxo Completo
+            const container4 = document.getElementById('testes-fluxo-completo');
+            endpointsValidados.forEach(endpoint => {
+                const id = `test-fluxo-completo-${endpoint.nome}`;
+                container4.innerHTML += `
+                    <div class="test-item" id="${id}">
+                        <div class="test-header">
+                            <span class="test-title">${endpoint.nome}</span>
+                            <span class="test-status status-pending">Pendente</span>
+                        </div>
+                        <div class="test-details" style="display: none;"></div>
+                    </div>
+                `;
+            });
+            
+            // Teste 5: Múltiplos Endpoints
+            const container5 = document.getElementById('testes-multiplos-endpoints');
+            container5.innerHTML += `
+                <div class="test-item" id="test-multiplos-endpoints">
+                    <div class="test-header">
+                        <span class="test-title">Validação de Todos os Endpoints</span>
+                        <span class="test-status status-pending">Pendente</span>
+                    </div>
+                    <div class="test-details" style="display: none;"></div>
+                </div>
+            `;
+        }
+        
+        // Atualizar status do teste
+        function atualizarStatusTeste(id, status, dados = null) {
+            const item = document.getElementById(id);
+            if (!item) return;
+            
+            item.className = `test-item ${status}`;
+            const statusEl = item.querySelector('.test-status');
+            const detailsEl = item.querySelector('.test-details');
+            
+            statusEl.className = `test-status status-${status}`;
+            statusEl.textContent = status === 'success' ? '✅ Sucesso' : 
+                                  status === 'error' ? '❌ Erro' : 
+                                  status === 'running' ? '⏳ Executando...' : '⏸️ Pendente';
+            
+            if (dados) {
+                detailsEl.style.display = 'block';
+                detailsEl.textContent = JSON.stringify(dados, null, 2);
+            }
+            
+            atualizarResumo();
+        }
+        
+        // Atualizar resumo
+        function atualizarResumo() {
+            const todosItens = document.querySelectorAll('.test-item');
+            let total = todosItens.length;
+            let sucesso = 0;
+            let erro = 0;
+            let pendente = 0;
+            
+            todosItens.forEach(item => {
+                const status = item.querySelector('.test-status');
+                if (status.classList.contains('status-success')) sucesso++;
+                else if (status.classList.contains('status-error')) erro++;
+                else if (status.classList.contains('status-pending')) pendente++;
+            });
+            
+            document.getElementById('totalTestes').textContent = total;
+            document.getElementById('testesSucesso').textContent = sucesso;
+            document.getElementById('testesErro').textContent = erro;
+            document.getElementById('testesPendentes').textContent = pendente;
+        }
+        
+        // Teste de CORS (OPTIONS)
+        async function testarCORS(endpoint, origem, esperadoPermitido) {
+            const url = `${config.urlBase}/${endpoint.nome}`;
+            
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('OPTIONS', url);
+                xhr.setRequestHeader('Origin', origem);
+                xhr.setRequestHeader('Access-Control-Request-Method', endpoint.metodo);
+                if (endpoint.headers.length > 0) {
+                    xhr.setRequestHeader('Access-Control-Request-Headers', endpoint.headers.join(', '));
+                }
+                
+                xhr.onload = function() {
+                    const corsOrigin = xhr.getResponseHeader('Access-Control-Allow-Origin');
+                    const corsMethods = xhr.getResponseHeader('Access-Control-Allow-Methods');
+                    const corsHeaders = xhr.getResponseHeader('Access-Control-Allow-Headers');
+                    
+                    const resultado = {
+                        status: xhr.status,
+                        corsOrigin: corsOrigin,
+                        corsMethods: corsMethods,
+                        corsHeaders: corsHeaders,
+                        origem: origem,
+                        esperadoPermitido: esperadoPermitido,
+                        permitido: esperadoPermitido 
+                            ? (corsOrigin === origem || corsOrigin === '*') 
+                            : (!corsOrigin || corsOrigin === 'null'),
+                        sucesso: esperadoPermitido 
+                            ? (corsOrigin === origem || corsOrigin === '*')
+                            : (!corsOrigin || corsOrigin === 'null')
+                    };
+                    
+                    resolve(resultado);
+                };
+                
+                xhr.onerror = function() {
+                    resolve({
+                        status: 0,
+                        erro: 'Erro na requisição',
+                        origem: origem,
+                        esperadoPermitido: esperadoPermitido,
+                        permitido: false,
+                        sucesso: false
+                    });
+                };
+                
+                xhr.send();
+            });
+        }
+        
+        // Teste de POST Real
+        async function testarPOST(endpoint, origem) {
+            const url = `${config.urlBase}/${endpoint.nome}`;
+            
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Origin', origem);
+                
+                // Adicionar headers específicos se necessário
+                if (endpoint.headers.includes('X-Webflow-Signature')) {
+                    xhr.setRequestHeader('X-Webflow-Signature', 'test-signature');
+                    xhr.setRequestHeader('X-Webflow-Timestamp', Date.now().toString());
+                }
+                
+                xhr.onload = function() {
+                    const corsOrigin = xhr.getResponseHeader('Access-Control-Allow-Origin');
+                    const resultado = {
+                        status: xhr.status,
+                        corsOrigin: corsOrigin,
+                        response: xhr.responseText.substring(0, 200),
+                        origem: origem,
+                        sucesso: corsOrigin === origem || corsOrigin === '*'
+                    };
+                    
+                    resolve(resultado);
+                };
+                
+                xhr.onerror = function() {
+                    resolve({
+                        status: 0,
+                        erro: 'Erro na requisição',
+                        origem: origem,
+                        sucesso: false
+                    });
+                };
+                
+                // Enviar dados de teste
+                xhr.send(JSON.stringify({ test: true }));
+            });
+        }
+        
+        // Executar todos os testes
+        async function executarTodosTestes() {
+            // Teste 1: Origem Permitida
+            for (const endpoint of endpointsValidados) {
+                const id = `test-origem-permitida-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const resultado = await testarCORS(endpoint, config.origemWebflow, true);
+                resultados.origemPermitida[endpoint.nome] = resultado;
+                
+                atualizarStatusTeste(id, resultado.sucesso ? 'success' : 'error', resultado);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Teste 2: Origem NÃO Permitida
+            for (const endpoint of endpointsValidados) {
+                const id = `test-origem-nao-permitida-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const resultado = await testarCORS(endpoint, config.origemNaoPermitida, false);
+                resultados.origemNaoPermitida[endpoint.nome] = resultado;
+                
+                atualizarStatusTeste(id, resultado.sucesso ? 'success' : 'error', resultado);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Teste 3: POST Real
+            for (const endpoint of endpointsValidados) {
+                const id = `test-post-real-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const resultado = await testarPOST(endpoint, config.origemWebflow);
+                resultados.postReal[endpoint.nome] = resultado;
+                
+                atualizarStatusTeste(id, resultado.sucesso ? 'success' : 'error', resultado);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Teste 4: Fluxo Completo
+            for (const endpoint of endpointsValidados) {
+                const id = `test-fluxo-completo-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // OPTIONS primeiro
+                const resultadoOPTIONS = await testarCORS(endpoint, config.origemWebflow, true);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // POST depois
+                const resultadoPOST = await testarPOST(endpoint, config.origemWebflow);
+                
+                const resultado = {
+                    options: resultadoOPTIONS,
+                    post: resultadoPOST,
+                    sucesso: resultadoOPTIONS.sucesso && resultadoPOST.sucesso
+                };
+                
+                resultados.fluxoCompleto[endpoint.nome] = resultado;
+                atualizarStatusTeste(id, resultado.sucesso ? 'success' : 'error', resultado);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Teste 5: Múltiplos Endpoints
+            const id = 'test-multiplos-endpoints';
+            atualizarStatusTeste(id, 'running');
+            
+            const todosSucesso = Object.values(resultados.origemPermitida).every(r => r.sucesso) &&
+                                Object.values(resultados.origemNaoPermitida).every(r => r.sucesso) &&
+                                Object.values(resultados.postReal).every(r => r.sucesso) &&
+                                Object.values(resultados.fluxoCompleto).every(r => r.sucesso);
+            
+            const resultado = {
+                origemPermitida: Object.keys(resultados.origemPermitida).filter(k => resultados.origemPermitida[k].sucesso).length,
+                origemNaoPermitida: Object.keys(resultados.origemNaoPermitida).filter(k => resultados.origemNaoPermitida[k].sucesso).length,
+                postReal: Object.keys(resultados.postReal).filter(k => resultados.postReal[k].sucesso).length,
+                fluxoCompleto: Object.keys(resultados.fluxoCompleto).filter(k => resultados.fluxoCompleto[k].sucesso).length,
+                todosSucesso: todosSucesso
+            };
+            
+            resultados.multiplosEndpoints = resultado;
+            atualizarStatusTeste(id, todosSucesso ? 'success' : 'error', resultado);
+        }
+        
+        // Limpar resultados
+        function limparResultados() {
+            document.querySelectorAll('.test-item').forEach(item => {
+                item.className = 'test-item';
+                const statusEl = item.querySelector('.test-status');
+                statusEl.className = 'test-status status-pending';
+                statusEl.textContent = '⏸️ Pendente';
+                const detailsEl = item.querySelector('.test-details');
+                detailsEl.style.display = 'none';
+                detailsEl.textContent = '';
+            });
+            
+            Object.keys(resultados).forEach(key => {
+                resultados[key] = {};
+            });
+            
+            atualizarResumo();
+        }
+        
+        // Exportar relatório
+        function exportarRelatorio() {
+            const relatorio = {
+                timestamp: new Date().toISOString(),
+                config: config,
+                resultados: resultados
+            };
+            
+            const blob = new Blob([JSON.stringify(relatorio, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio_webflow_cors_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,114 @@
+<?php
+/**
+ * log_export.php - API de Exportação de Logs
+ * Versão: 1.0.0
+ * Data: 2025-11-08
+ * 
+ * Exporta logs em diferentes formatos (CSV, JSON, PDF)
+ */
+
+require_once __DIR__ . '/log_query.php';
+
+// Obter formato
+$format = strtolower($_GET['format'] ?? 'json');
+
+if (!in_array($format, ['csv', 'json', 'pdf'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid format. Use: csv, json, or pdf']);
+    exit;
+}
+
+// Para JSON, usar log_query.php diretamente
+if ($format === 'json') {
+    // Redirecionar para log_query.php com os mesmos parâmetros
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    require __DIR__ . '/log_query.php';
+    exit;
+}
+
+// Para CSV
+if ($format === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="logs_' . date('Y-m-d') . '.csv"');
+    
+    // Obter logs (reutilizar lógica de log_query.php)
+    $logger = new ProfessionalLogger();
+    $pdo = $logger->getConnection();
+    
+    if ($pdo === null) {
+        http_response_code(500);
+        echo "Error: Database connection failed\n";
+        exit;
+    }
+    
+    // Construir query (simplificado para CSV)
+    $where = [];
+    $bindings = [];
+    
+    if (isset($_GET['start_date'])) {
+        $where[] = "timestamp >= :start_date";
+        $bindings[':start_date'] = $_GET['start_date'];
+    }
+    if (isset($_GET['end_date'])) {
+        $where[] = "timestamp <= :end_date";
+        $bindings[':end_date'] = $_GET['end_date'] . ' 23:59:59';
+    }
+    if (isset($_GET['level'])) {
+        $where[] = "level = :level";
+        $bindings[':level'] = strtoupper($_GET['level']);
+    }
+    
+    $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+    $limit = min(10000, (int)($_GET['limit'] ?? 1000));
+    
+    $sql = "
+        SELECT 
+            id, log_id, timestamp, level, category,
+            file_name, line_number, function_name,
+            message, url, session_id, ip_address, environment
+        FROM application_logs
+        $whereClause
+        ORDER BY timestamp DESC
+        LIMIT :limit
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    foreach ($bindings as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    // Output CSV
+    $output = fopen('php://output', 'w');
+    
+    // BOM para UTF-8
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+    
+    // Headers
+    fputcsv($output, [
+        'ID', 'Log ID', 'Timestamp', 'Level', 'Category',
+        'File Name', 'Line Number', 'Function',
+        'Message', 'URL', 'Session ID', 'IP Address', 'Environment'
+    ]);
+    
+    // Data
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
+
+// Para PDF (implementação básica - pode ser melhorada)
+if ($format === 'pdf') {
+    http_response_code(501);
+    echo json_encode([
+        'success' => false,
+        'error' => 'PDF export not yet implemented',
+        'message' => 'Please use CSV or JSON format for now'
+    ]);
+    exit;
+}
+

@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Testes de Permissões, CORS e Acessos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .config-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .config-group {
+            margin-bottom: 15px;
+        }
+        
+        .config-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .config-group input, .config-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .config-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            min-height: 80px;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .test-section-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .test-section-header h2 {
+            color: #333;
+            font-size: 1.3em;
+        }
+        
+        .test-section-content {
+            padding: 20px;
+        }
+        
+        .test-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .test-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .test-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .test-item-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .test-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #ffc107;
+            color: #856404;
+        }
+        
+        .status-running {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .status-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-error {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .test-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .test-details pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
+        .summary {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Testes de Permissões, CORS e Acessos</h1>
+        <p class="subtitle">Suíte completa de testes para validar segurança e funcionamento de endpoints e arquivos JavaScript</p>
+        
+        <!-- Configuração -->
+        <div class="config-section">
+            <h2>⚙️ Configuração</h2>
+            <div class="config-group">
+                <label>Ambiente:</label>
+                <select id="ambiente">
+                    <option value="dev">DEV (dev.bssegurosimediato.com.br)</option>
+                    <option value="prod">PROD (bssegurosimediato.com.br)</option>
+                </select>
+            </div>
+            <div class="config-group">
+                <label>URL Base:</label>
+                <input type="text" id="urlBase" value="https://dev.bssegurosimediato.com.br" readonly>
+            </div>
+            <div class="config-group">
+                <label>Origens Permitidas (separadas por vírgula):</label>
+                <textarea id="origensPermitidas">https://segurosimediato-dev.webflow.io,https://segurosimediato-8119bf26e77bf4ff336a58e.webflow.io,https://dev.bssegurosimediato.com.br,https://bssegurosimediato.com.br</textarea>
+            </div>
+            <div class="config-group">
+                <label>Origens NÃO Permitidas (separadas por vírgula):</label>
+                <textarea id="origensNaoPermitidas">https://evil-site.com,https://malicious-domain.com,https://outro-dominio.com.br</textarea>
+            </div>
+            <button class="btn btn-success" onclick="executarTodosTestes()">▶️ Executar Todos os Testes</button>
+            <button class="btn btn-secondary" onclick="limparResultados()">🗑️ Limpar Resultados</button>
+            <button class="btn btn-secondary" onclick="exportarRelatorio()">📊 Exportar Relatório</button>
+        </div>
+        
+        <!-- Resumo -->
+        <div class="summary">
+            <h2>📊 Resumo dos Testes</h2>
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="totalTestes">0</div>
+                    <div class="stat-label">Total de Testes</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="testesSucesso" style="color: #28a745;">0</div>
+                    <div class="stat-label">Sucessos</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="testesErro" style="color: #dc3545;">0</div>
+                    <div class="stat-label">Erros</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="testesPendentes" style="color: #ffc107;">0</div>
+                    <div class="stat-label">Pendentes</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Testes de CORS - Endpoints PHP -->
+        <div class="test-section">
+            <div class="test-section-header">
+                <h2>🔒 Testes de CORS - Endpoints PHP</h2>
+                <button class="btn" onclick="executarTestesCORS()">▶️ Executar Testes CORS</button>
+            </div>
+            <div class="test-section-content" id="testesCORS">
+                <!-- Testes serão inseridos aqui dinamicamente -->
+            </div>
+        </div>
+        
+        <!-- Testes de Acesso - Arquivos JavaScript -->
+        <div class="test-section">
+            <div class="test-section-header">
+                <h2>📄 Testes de Acesso - Arquivos JavaScript</h2>
+                <button class="btn" onclick="executarTestesJS()">▶️ Executar Testes JS</button>
+            </div>
+            <div class="test-section-content" id="testesJS">
+                <!-- Testes serão inseridos aqui dinamicamente -->
+            </div>
+        </div>
+        
+        <!-- Testes de Permissões -->
+        <div class="test-section">
+            <div class="test-section-header">
+                <h2>🛡️ Testes de Permissões e Segurança</h2>
+                <button class="btn" onclick="executarTestesPermissoes()">▶️ Executar Testes Permissões</button>
+                <button class="btn btn-danger" onclick="executarTesteErro502()">🔴 Testar Erro 502</button>
+            </div>
+            <div class="test-section-content" id="testesPermissoes">
+                <!-- Testes serão inseridos aqui dinamicamente -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuração
+        const config = {
+            ambiente: 'dev',
+            urlBase: 'https://dev.bssegurosimediato.com.br',
+            origensPermitidas: [],
+            origensNaoPermitidas: []
+        };
+        
+        // Endpoints PHP
+        const endpointsPHP = [
+            { nome: 'log_endpoint.php', metodo: 'POST', corsValidado: true, headers: ['X-API-Key', 'X-Client-Timestamp'] },
+            { nome: 'add_flyingdonkeys.php', metodo: 'POST', corsValidado: true, headers: ['X-Webflow-Signature', 'X-Webflow-Timestamp'] },
+            { nome: 'add_webflow_octa.php', metodo: 'POST', corsValidado: true, headers: ['X-Webflow-Signature', 'X-Webflow-Timestamp'] },
+            { nome: 'cpf-validate.php', metodo: 'GET,POST', corsValidado: false, headers: [] },
+            { nome: 'placa-validate.php', metodo: 'GET,POST', corsValidado: false, headers: [] },
+            { nome: 'send_email_notification_endpoint.php', metodo: 'POST', corsValidado: false, headers: [] },
+            { nome: 'config_env.js.php', metodo: 'GET', corsValidado: false, headers: [] }
+        ];
+        
+        // Arquivos JavaScript
+        const arquivosJS = [
+            'FooterCodeSiteDefinitivoCompleto.js',
+            'MODAL_WHATSAPP_DEFINITIVO.js',
+            'webflow_injection_limpo.js',
+            'config_env.js.php'
+        ];
+        
+        // Resultados dos testes
+        const resultados = {
+            cors: {},
+            js: {},
+            permissoes: {}
+        };
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarConfiguracao();
+            criarEstruturaTestes();
+            verificarAmbienteLocal();
+        });
+        
+        // Verificar se está sendo executado via file:// e avisar sobre CORS
+        function verificarAmbienteLocal() {
+            if (window.location.protocol === 'file:') {
+                const aviso = document.createElement('div');
+                aviso.style.cssText = 'background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin-bottom: 20px; color: #856404;';
+                aviso.innerHTML = `
+                    <h3 style="margin-top: 0; color: #856404;">⚠️ AVISO: Arquivo Aberto Localmente (file://)</h3>
+                    <p><strong>Os testes de CORS podem falhar quando o arquivo é aberto diretamente do sistema de arquivos.</strong></p>
+                    <p><strong>Soluções:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Opção 1 (Recomendada):</strong> Copiar arquivo para servidor DEV e acessar via HTTPS</li>
+                        <li><strong>Opção 2:</strong> Usar servidor HTTP local (ex: Python: <code>python -m http.server 8000</code>)</li>
+                        <li><strong>Opção 3:</strong> Usar extensão de servidor local no navegador</li>
+                    </ul>
+                    <p><strong>URL Recomendada:</strong> <code>https://dev.bssegurosimediato.com.br/TESTES/test_permissoes_cors_acessos.html</code></p>
+                    <p style="margin-bottom: 0;"><em>Os testes de acesso a arquivos JavaScript podem funcionar, mas testes de CORS requerem HTTP/HTTPS.</em></p>
+                `;
+                const container = document.querySelector('.container');
+                container.insertBefore(aviso, container.firstChild);
+            }
+        }
+        
+        // Atualizar configuração quando ambiente muda
+        document.getElementById('ambiente').addEventListener('change', function() {
+            const ambiente = this.value;
+            const urlBase = ambiente === 'dev' 
+                ? 'https://dev.bssegurosimediato.com.br' 
+                : 'https://bssegurosimediato.com.br';
+            document.getElementById('urlBase').value = urlBase;
+            config.ambiente = ambiente;
+            config.urlBase = urlBase;
+        });
+        
+        function atualizarConfiguracao() {
+            config.ambiente = document.getElementById('ambiente').value;
+            config.urlBase = document.getElementById('urlBase').value;
+            config.origensPermitidas = document.getElementById('origensPermitidas').value
+                .split(',')
+                .map(o => o.trim())
+                .filter(o => o);
+            config.origensNaoPermitidas = document.getElementById('origensNaoPermitidas').value
+                .split(',')
+                .map(o => o.trim())
+                .filter(o => o);
+        }
+        
+        function criarEstruturaTestes() {
+            // Criar testes de CORS
+            const containerCORS = document.getElementById('testesCORS');
+            endpointsPHP.forEach(endpoint => {
+                const testItem = criarTestItem(`CORS - ${endpoint.nome}`, `test-cors-${endpoint.nome}`);
+                containerCORS.appendChild(testItem);
+            });
+            
+            // Criar testes de JS
+            const containerJS = document.getElementById('testesJS');
+            arquivosJS.forEach(arquivo => {
+                const testItem = criarTestItem(`Acesso - ${arquivo}`, `test-js-${arquivo}`);
+                containerJS.appendChild(testItem);
+            });
+            
+            // Criar testes de permissões
+            const containerPermissoes = document.getElementById('testesPermissoes');
+            endpointsPHP.forEach(endpoint => {
+                const testItem = criarTestItem(`Permissões - ${endpoint.nome}`, `test-permissoes-${endpoint.nome}`);
+                containerPermissoes.appendChild(testItem);
+            });
+        }
+        
+        function criarTestItem(titulo, id) {
+            const div = document.createElement('div');
+            div.className = 'test-item';
+            div.id = id;
+            div.innerHTML = `
+                <div class="test-item-header">
+                    <div class="test-item-title">${titulo}</div>
+                    <div class="test-status status-pending">Pendente</div>
+                </div>
+                <div class="test-details hidden"></div>
+            `;
+            return div;
+        }
+        
+        function atualizarStatusTeste(id, status, detalhes) {
+            const item = document.getElementById(id);
+            if (!item) return;
+            
+            const statusEl = item.querySelector('.test-status');
+            const detailsEl = item.querySelector('.test-details');
+            
+            statusEl.className = `test-status status-${status}`;
+            statusEl.textContent = status === 'success' ? '✅ Sucesso' : 
+                                  status === 'error' ? '❌ Erro' : 
+                                  status === 'running' ? '⏳ Executando...' : '⏸️ Pendente';
+            
+            if (detalhes) {
+                detailsEl.classList.remove('hidden');
+                detailsEl.innerHTML = `<pre>${JSON.stringify(detalhes, null, 2)}</pre>`;
+            }
+            
+            atualizarResumo();
+        }
+        
+        function atualizarResumo() {
+            const todosItens = document.querySelectorAll('.test-item');
+            let total = todosItens.length;
+            let sucesso = 0;
+            let erro = 0;
+            let pendente = 0;
+            
+            todosItens.forEach(item => {
+                const status = item.querySelector('.test-status');
+                if (status.classList.contains('status-success')) sucesso++;
+                else if (status.classList.contains('status-error')) erro++;
+                else pendente++;
+            });
+            
+            document.getElementById('totalTestes').textContent = total;
+            document.getElementById('testesSucesso').textContent = sucesso;
+            document.getElementById('testesErro').textContent = erro;
+            document.getElementById('testesPendentes').textContent = pendente;
+        }
+        
+        // Teste de CORS usando XMLHttpRequest (mais confiável para CORS)
+        async function testarCORS(endpoint, origem, esperadoPermitido) {
+            const url = `${config.urlBase}/${endpoint.nome}`;
+            
+            return new Promise((resolve) => {
+                // Teste OPTIONS (preflight)
+                const xhr = new XMLHttpRequest();
+                xhr.open('OPTIONS', url);
+                xhr.setRequestHeader('Origin', origem);
+                xhr.setRequestHeader('Access-Control-Request-Method', endpoint.metodo.split(',')[0]);
+                if (endpoint.headers.length > 0) {
+                    xhr.setRequestHeader('Access-Control-Request-Headers', endpoint.headers.join(', '));
+                }
+                
+                xhr.onload = function() {
+                    const corsOrigin = xhr.getResponseHeader('Access-Control-Allow-Origin');
+                    const corsMethods = xhr.getResponseHeader('Access-Control-Allow-Methods');
+                    const corsHeaders = xhr.getResponseHeader('Access-Control-Allow-Headers');
+                    
+                    const resultado = {
+                        preflight: {
+                            status: xhr.status,
+                            corsOrigin: corsOrigin,
+                            corsMethods: corsMethods,
+                            corsHeaders: corsHeaders
+                        },
+                        origem: origem,
+                        esperadoPermitido: esperadoPermitido,
+                        permitido: esperadoPermitido 
+                            ? (corsOrigin === origem || corsOrigin === '*') 
+                            : (corsOrigin !== origem && corsOrigin !== '*'),
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    resolve(resultado);
+                };
+                
+                xhr.onerror = function() {
+                    resolve({
+                        erro: 'Erro de rede ao testar CORS',
+                        origem: origem,
+                        esperadoPermitido: esperadoPermitido,
+                        timestamp: new Date().toISOString()
+                    });
+                };
+                
+                xhr.send();
+            });
+        }
+        
+        // Teste de acesso a arquivo JS
+        async function testarAcessoJS(arquivo) {
+            const url = `${config.urlBase}/${arquivo}`;
+            
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', url);
+                
+                xhr.onload = function() {
+                    const contentType = xhr.getResponseHeader('Content-Type') || '';
+                    const status = xhr.status;
+                    const texto = xhr.responseText.substring(0, 500);
+                    
+                    // Validar se é código JavaScript válido (básico)
+                    let jsValido = false;
+                    try {
+                        // Tentar verificar se contém sintaxe JS básica
+                        const temFunction = texto.includes('function') || texto.includes('=>') || texto.includes('const ') || texto.includes('let ');
+                        const temParenteses = texto.includes('(') && texto.includes(')');
+                        jsValido = temFunction || (temParenteses && texto.length > 100);
+                    } catch (e) {
+                        jsValido = false;
+                    }
+                    
+                    resolve({
+                        status: status,
+                        contentType: contentType,
+                        isJavaScript: contentType.includes('javascript') || contentType.includes('text/javascript') || contentType.includes('application/javascript'),
+                        tamanho: xhr.responseText.length,
+                        preview: texto,
+                        jsValido: jsValido,
+                        valido: status === 200 && (contentType.includes('javascript') || contentType.includes('text/javascript') || contentType.includes('application/javascript')),
+                        timestamp: new Date().toISOString()
+                    });
+                };
+                
+                xhr.onerror = function() {
+                    resolve({
+                        erro: 'Erro ao carregar arquivo',
+                        status: xhr.status || 'N/A',
+                        timestamp: new Date().toISOString()
+                    });
+                };
+                
+                xhr.send();
+            });
+        }
+        
+        // Teste de permissões
+        async function testarPermissoes(endpoint, metodoIncorreto) {
+            const url = `${config.urlBase}/${endpoint.nome}`;
+            
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open(metodoIncorreto, url);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                
+                xhr.onload = function() {
+                    resolve({
+                        metodo: metodoIncorreto,
+                        status: xhr.status,
+                        esperado: 405, // Method Not Allowed
+                        correto: xhr.status === 405,
+                        erro502: xhr.status === 502, // Validar que não há erro 502
+                        timestamp: new Date().toISOString()
+                    });
+                };
+                
+                xhr.onerror = function() {
+                    resolve({
+                        erro: 'Erro de rede',
+                        metodo: metodoIncorreto,
+                        status: xhr.status || 'N/A',
+                        timestamp: new Date().toISOString()
+                    });
+                };
+                
+                xhr.send();
+            });
+        }
+        
+        // Teste específico para validar ausência de erro 502 no log_endpoint.php
+        async function testarErro502(endpoint) {
+            if (endpoint.nome !== 'log_endpoint.php') {
+                return { skip: true, motivo: 'Teste específico apenas para log_endpoint.php' };
+            }
+            
+            const url = `${config.urlBase}/${endpoint.nome}`;
+            const resultados = [];
+            
+            // Fazer múltiplas requisições para validar que nenhuma retorna 502
+            for (let i = 0; i < 3; i++) {
+                await new Promise(resolve => setTimeout(resolve, 300)); // Delay entre requisições
+                
+                const resultado = await new Promise((resolve) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', url);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Origin', config.origensPermitidas[0] || 'https://test.com');
+                    
+                    xhr.onload = function() {
+                        resultados.push({
+                            tentativa: i + 1,
+                            status: xhr.status,
+                            erro502: xhr.status === 502,
+                            timestamp: new Date().toISOString()
+                        });
+                        resolve();
+                    };
+                    
+                    xhr.onerror = function() {
+                        resultados.push({
+                            tentativa: i + 1,
+                            erro: 'Erro de rede',
+                            status: xhr.status || 'N/A',
+                            timestamp: new Date().toISOString()
+                        });
+                        resolve();
+                    };
+                    
+                    // Enviar JSON válido mínimo
+                    xhr.send(JSON.stringify({ level: 'INFO', message: 'Teste 502' }));
+                });
+            }
+            
+            const temErro502 = resultados.some(r => r.erro502 === true);
+            const todosStatusValidos = resultados.every(r => r.status && r.status !== 502);
+            
+            return {
+                resultados: resultados,
+                temErro502: temErro502,
+                todosStatusValidos: todosStatusValidos,
+                sucesso: !temErro502 && todosStatusValidos,
+                timestamp: new Date().toISOString()
+            };
+        }
+        
+        // Executar todos os testes de CORS
+        async function executarTestesCORS() {
+            atualizarConfiguracao();
+            
+            // Avisar se estiver em file://
+            if (window.location.protocol === 'file:') {
+                if (!confirm('⚠️ AVISO: Você está executando o arquivo localmente (file://).\n\nOs testes de CORS podem falhar devido a políticas do navegador.\n\nRecomenda-se executar via servidor HTTP/HTTPS.\n\nDeseja continuar mesmo assim?')) {
+                    return;
+                }
+            }
+            
+            for (const endpoint of endpointsPHP) {
+                const id = `test-cors-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                // Aguardar um pouco entre testes para não sobrecarregar
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Testar com origem permitida
+                if (endpoint.corsValidado && config.origensPermitidas.length > 0) {
+                    const origemPermitida = config.origensPermitidas[0];
+                    const resultadoPermitido = await testarCORS(endpoint, origemPermitida, true);
+                    
+                    // Aguardar antes do próximo teste
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Testar com origem não permitida
+                    const origemNaoPermitida = config.origensNaoPermitidas.length > 0 
+                        ? config.origensNaoPermitidas[0] 
+                        : 'https://evil-site.com';
+                    const resultadoNaoPermitido = await testarCORS(endpoint, origemNaoPermitida, false);
+                    
+                    // Validar resultado: origem permitida deve ser aceita, não permitida deve ser rejeitada
+                    const sucesso = resultadoPermitido.permitido && 
+                                   (!resultadoNaoPermitido.permitido || resultadoNaoPermitido.erro);
+                    
+                    atualizarStatusTeste(id, sucesso ? 'success' : 'error', {
+                        origemPermitida: resultadoPermitido,
+                        origemNaoPermitida: resultadoNaoPermitido,
+                        resumo: sucesso ? 'CORS configurado corretamente' : 'Problema na configuração CORS'
+                    });
+                } else {
+                    // Endpoint com wildcard (*) - testar apenas acesso
+                    const resultado = await testarCORS(endpoint, config.origensPermitidas[0] || 'https://test.com', true);
+                    const sucesso = resultado.permitido !== false && !resultado.erro;
+                    atualizarStatusTeste(id, sucesso ? 'success' : 'error', {
+                        ...resultado,
+                        resumo: 'Endpoint com CORS wildcard (*) - aceita qualquer origem'
+                    });
+                }
+            }
+        }
+        
+        // Executar todos os testes de JS
+        async function executarTestesJS() {
+            atualizarConfiguracao();
+            
+            for (const arquivo of arquivosJS) {
+                const id = `test-js-${arquivo}`;
+                atualizarStatusTeste(id, 'running');
+                
+                const resultado = await testarAcessoJS(arquivo);
+                atualizarStatusTeste(id, resultado.valido ? 'success' : 'error', resultado);
+            }
+        }
+        
+        // Executar todos os testes de permissões
+        async function executarTestesPermissoes() {
+            atualizarConfiguracao();
+            
+            for (const endpoint of endpointsPHP) {
+                const id = `test-permissoes-${endpoint.nome}`;
+                atualizarStatusTeste(id, 'running');
+                
+                // Testar método incorreto (GET quando espera POST, etc)
+                const metodoIncorreto = endpoint.metodo.includes('POST') ? 'PUT' : 'POST';
+                const resultado = await testarPermissoes(endpoint, metodoIncorreto);
+                
+                // Validar que não há erro 502 mesmo com método incorreto
+                const sucesso = resultado.correto && !resultado.erro502;
+                
+                atualizarStatusTeste(id, sucesso ? 'success' : 'error', {
+                    ...resultado,
+                    resumo: resultado.erro502 ? '❌ ERRO 502 DETECTADO!' : (resultado.correto ? '✅ Método incorreto rejeitado corretamente (405)' : '⚠️ Status inesperado')
+                });
+            }
+        }
+        
+        // Executar teste específico de erro 502
+        async function executarTesteErro502() {
+            atualizarConfiguracao();
+            
+            // Avisar se estiver em file://
+            if (window.location.protocol === 'file:') {
+                if (!confirm('⚠️ AVISO: Você está executando o arquivo localmente (file://).\n\nOs testes podem falhar devido a políticas CORS do navegador.\n\nRecomenda-se executar via servidor HTTP/HTTPS.\n\nDeseja continuar mesmo assim?')) {
+                    return;
+                }
+            }
+            
+            const endpoint = endpointsPHP.find(e => e.nome === 'log_endpoint.php');
+            if (!endpoint) {
+                console.error('log_endpoint.php não encontrado nos endpoints');
+                return;
+            }
+            
+            const id = 'test-502-log-endpoint';
+            const item = document.getElementById(id);
+            if (!item) {
+                // Criar item de teste se não existir
+                const container = document.getElementById('testesPermissoes');
+                const testItem = criarTestItem('Erro 502 - log_endpoint.php', id);
+                container.appendChild(testItem);
+            }
+            
+            atualizarStatusTeste(id, 'running');
+            const resultado = await testarErro502(endpoint);
+            
+            if (resultado.skip) {
+                atualizarStatusTeste(id, 'pending', resultado);
+                return;
+            }
+            
+            atualizarStatusTeste(id, resultado.sucesso ? 'success' : 'error', {
+                ...resultado,
+                resumo: resultado.sucesso 
+                    ? '✅ Nenhum erro 502 detectado - correção funcionando!' 
+                    : '❌ Erro 502 ainda ocorre - requer investigação'
+            });
+        }
+        
+        // Executar todos os testes
+        async function executarTodosTestes() {
+            await executarTestesCORS();
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Delay entre testes
+            await executarTestesJS();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await executarTestesPermissoes();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await executarTesteErro502(); // Teste específico para erro 502
+        }
+        
+        // Limpar resultados
+        function limparResultados() {
+            document.querySelectorAll('.test-item').forEach(item => {
+                const status = item.querySelector('.test-status');
+                const details = item.querySelector('.test-details');
+                status.className = 'test-status status-pending';
+                status.textContent = '⏸️ Pendente';
+                details.classList.add('hidden');
+                details.innerHTML = '';
+            });
+            atualizarResumo();
+        }
+        
+        // Exportar relatório
+        function exportarRelatorio() {
+            const relatorio = {
+                data: new Date().toISOString(),
+                ambiente: config.ambiente,
+                urlBase: config.urlBase,
+                resultados: {}
+            };
+            
+            document.querySelectorAll('.test-item').forEach(item => {
+                const id = item.id;
+                const status = item.querySelector('.test-status');
+                const details = item.querySelector('.test-details');
+                
+                relatorio.resultados[id] = {
+                    status: status.textContent,
+                    detalhes: details.textContent ? JSON.parse(details.textContent) : null
+                };
+            });
+            
+            const blob = new Blob([JSON.stringify(relatorio, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio_testes_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simulação Webflow - APP_BASE_URL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .log {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        h2 { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Simulação Webflow - APP_BASE_URL</h1>
+    <p>Este teste simula o comportamento do Webflow carregando o FooterCodeSiteDefinitivoCompleto.js</p>
+    
+    <h2>Console Log (simulado)</h2>
+    <div id="console-log" class="log"></div>
+    
+    <h2>Status</h2>
+    <div id="status"></div>
+    
+    <h2>Variáveis Globais</h2>
+    <div id="globals"></div>
+    
+    <script>
+        // Interceptar console.log, console.error, etc.
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const logDiv = document.getElementById('console-log');
+        const statusDiv = document.getElementById('status');
+        const globalsDiv = document.getElementById('globals');
+        
+        function addLog(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warning');
+        };
+        
+        // Interceptar window.APP_BASE_URL
+        let appBaseUrlValue = null;
+        Object.defineProperty(window, 'APP_BASE_URL', {
+            get: function() {
+                return appBaseUrlValue;
+            },
+            set: function(value) {
+                appBaseUrlValue = value;
+                addLog(`✅ APP_BASE_URL definido: ${value}`, 'success');
+                updateStatus();
+                updateGlobals();
+            },
+            configurable: true
+        });
+        
+        function updateStatus() {
+            const hasAppBaseUrl = !!window.APP_BASE_URL;
+            const hasAppEnv = !!window.APP_ENVIRONMENT;
+            statusDiv.innerHTML = `
+                <p><strong>APP_BASE_URL:</strong> <span class="${hasAppBaseUrl ? 'success' : 'error'}">${hasAppBaseUrl ? window.APP_BASE_URL : 'NÃO DISPONÍVEL'}</span></p>
+                <p><strong>APP_ENVIRONMENT:</strong> <span class="${hasAppEnv ? 'success' : 'error'}">${hasAppEnv ? window.APP_ENVIRONMENT : 'NÃO DISPONÍVEL'}</span></p>
+                <p><strong>APP_ENV_LOADED:</strong> ${window.APP_ENV_LOADED ? '✅' : '❌'}</p>
+            `;
+        }
+        
+        function updateGlobals() {
+            globalsDiv.innerHTML = `
+                <pre>${JSON.stringify({
+                    APP_BASE_URL: window.APP_BASE_URL || 'NÃO DEFINIDO',
+                    APP_ENVIRONMENT: window.APP_ENVIRONMENT || 'NÃO DEFINIDO',
+                    APP_ENV_LOADED: window.APP_ENV_LOADED || false
+                }, null, 2)}</pre>
+            `;
+        }
+        
+        // Simular ambiente Webflow
+        addLog('🌐 Simulando ambiente Webflow (segurosimediato-dev.webflow.io)', 'info');
+        addLog('📥 Carregando FooterCodeSiteDefinitivoCompleto.js...', 'info');
+        
+        // Carregar o script
+        const script = document.createElement('script');
+        script.src = 'https://dev.bssegurosimediato.com.br/FooterCodeSiteDefinitivoCompleto.js';
+        script.async = false;
+        script.onload = function() {
+            addLog('✅ FooterCodeSiteDefinitivoCompleto.js carregado', 'success');
+            setTimeout(() => {
+                updateStatus();
+                updateGlobals();
+                
+                // Verificar se APP_BASE_URL foi definido
+                if (window.APP_BASE_URL) {
+                    addLog('✅ TESTE PASSOU: APP_BASE_URL está disponível', 'success');
+                } else {
+                    addLog('❌ TESTE FALHOU: APP_BASE_URL não está disponível', 'error');
+                }
+            }, 2000);
+        };
+        script.onerror = function() {
+            addLog('❌ Erro ao carregar FooterCodeSiteDefinitivoCompleto.js', 'error');
+        };
+        document.head.appendChild(script);
+        
+        // Atualizar status periodicamente
+        setInterval(() => {
+            updateStatus();
+            updateGlobals();
+        }, 500);
+    </script>
+</body>
+</html>
+

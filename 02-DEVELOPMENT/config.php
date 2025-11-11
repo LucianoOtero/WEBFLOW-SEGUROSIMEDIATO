@@ -1,0 +1,278 @@
+<?php
+/**
+ * CONFIG.PHP
+ * 
+ * Arquivo central de configuração usando variáveis de ambiente do Docker
+ * 
+ * Este arquivo lê todas as variáveis de ambiente do Docker e fornece
+ * funções helper para acesso seguro e consistente às configurações.
+ * 
+ * VERSÃO: 2.0.0
+ * DATA: 10/11/2025
+ * 
+ * SUBSTITUI: config/dev_config.php (que será eliminado)
+ */
+
+// ==================== VARIÁVEIS DE AMBIENTE PRINCIPAIS ====================
+
+/**
+ * Obter ambiente atual (development/production)
+ * @return string 'development' ou 'production'
+ */
+function getEnvironment() {
+    return $_ENV['PHP_ENV'] ?? 'development';
+}
+
+/**
+ * Verificar se está em ambiente de desenvolvimento
+ * @return bool
+ */
+function isDevelopment() {
+    return getEnvironment() === 'development';
+}
+
+/**
+ * Verificar se está em ambiente de produção
+ * @return bool
+ */
+function isProduction() {
+    return getEnvironment() === 'production';
+}
+
+/**
+ * Obter diretório base físico (APP_BASE_DIR)
+ * Usar para includes locais, file_get_contents (arquivo local), etc.
+ * @return string Caminho físico no servidor
+ */
+function getBaseDir() {
+    $baseDir = $_ENV['APP_BASE_DIR'] ?? '';
+    if (empty($baseDir)) {
+        error_log('[CONFIG] ERRO CRÍTICO: APP_BASE_DIR não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_BASE_DIR não está definido nas variáveis de ambiente');
+    }
+    // Garantir que não termina com barra
+    return rtrim($baseDir, '/\\');
+}
+
+/**
+ * Obter URL base HTTP (APP_BASE_URL)
+ * Usar para requisições HTTP, fetch, curl, etc.
+ * @return string URL base (ex: https://dev.bssegurosimediato.com.br)
+ */
+function getBaseUrl() {
+    $baseUrl = $_ENV['APP_BASE_URL'] ?? '';
+    if (empty($baseUrl)) {
+        error_log('[CONFIG] ERRO CRÍTICO: APP_BASE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_BASE_URL não está definido nas variáveis de ambiente');
+    }
+    // Garantir que não termina com barra
+    return rtrim($baseUrl, '/');
+}
+
+/**
+ * Obter origens permitidas para CORS (APP_CORS_ORIGINS)
+ * @return array Array de origens permitidas
+ */
+function getCorsOrigins() {
+    $corsOrigins = $_ENV['APP_CORS_ORIGINS'] ?? '';
+    if (empty($corsOrigins)) {
+        error_log('[CONFIG] ERRO CRÍTICO: APP_CORS_ORIGINS não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_CORS_ORIGINS não está definido nas variáveis de ambiente');
+    }
+    // Separar por vírgula e limpar espaços
+    $origins = array_map('trim', explode(',', $corsOrigins));
+    return array_filter($origins); // Remover vazios
+}
+
+/**
+ * Verificar se uma origem é permitida para CORS
+ * @param string $origin Origem a verificar
+ * @return bool
+ */
+function isCorsOriginAllowed($origin) {
+    $allowedOrigins = getCorsOrigins();
+    return in_array($origin, $allowedOrigins, true);
+}
+
+/**
+ * Configurar headers CORS baseado na origem da requisição
+ * @param string|null $origin Origem da requisição (opcional, pega de $_SERVER)
+ */
+function setCorsHeaders($origin = null) {
+    if ($origin === null) {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    }
+    
+    if (!empty($origin) && isCorsOriginAllowed($origin)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+    }
+    
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE');
+    header('Access-Control-Allow-Headers: Content-Type, X-Webflow-Signature, X-Webflow-Timestamp, X-Requested-With, Authorization');
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400'); // 24 horas
+    
+    // Responder a requisições OPTIONS (preflight)
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+        http_response_code(200);
+        header('Content-Length: 0');
+        header('Content-Type: text/plain');
+        exit(0);
+    }
+}
+
+// ==================== VARIÁVEIS DE BANCO DE DADOS ====================
+
+/**
+ * Obter configuração do banco de dados de logs
+ * @return array Array com host, port, name, user, pass
+ */
+function getDatabaseConfig() {
+    return [
+        'host' => $_ENV['LOG_DB_HOST'] ?? 'localhost',
+        'port' => (int)($_ENV['LOG_DB_PORT'] ?? 3306),
+        'name' => $_ENV['LOG_DB_NAME'] ?? (isDevelopment() ? 'rpa_logs_dev' : 'rpa_logs_prod'),
+        'user' => $_ENV['LOG_DB_USER'] ?? (isDevelopment() ? 'rpa_logger_dev' : 'rpa_logger_prod'),
+        'pass' => $_ENV['LOG_DB_PASS'] ?? ''
+    ];
+}
+
+// ==================== VARIÁVEIS DE APIs EXTERNAS ====================
+
+/**
+ * Obter URL do EspoCRM
+ * @return string URL do EspoCRM
+ */
+function getEspoCrmUrl() {
+    $url = $_ENV['ESPOCRM_URL'] ?? '';
+    if (empty($url)) {
+        error_log('[CONFIG] ERRO CRÍTICO: ESPOCRM_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('ESPOCRM_URL não está definido nas variáveis de ambiente');
+    }
+    return $url;
+}
+
+/**
+ * Obter API Key do EspoCRM
+ * @return string API Key
+ */
+function getEspoCrmApiKey() {
+    return $_ENV['ESPOCRM_API_KEY'] ?? (isDevelopment()
+        ? '73b5b7983bfc641cdba72d204a48ed9d'
+        : '82d5f667f3a65a9a43341a0705be2b0c');
+}
+
+/**
+ * Obter Secret do Webflow para FlyingDonkeys
+ * @return string Secret
+ */
+function getWebflowSecretFlyingDonkeys() {
+    return $_ENV['WEBFLOW_SECRET_FLYINGDONKEYS'] ?? (isDevelopment()
+        ? '888931809d5215258729a8df0b503403bfd300f32ead1a983d95a6119b166142'
+        : 'ce051cb1d819faac5837f4e47a7fdd8cf2a8b248a2b3ecdb9ab358cfb9ed7990');
+}
+
+/**
+ * Obter Secret do Webflow para OctaDesk
+ * @return string Secret
+ */
+function getWebflowSecretOctaDesk() {
+    return $_ENV['WEBFLOW_SECRET_OCTADESK'] ?? (isDevelopment()
+        ? '1dead60b2edf3bab32d8084b6ee105a9458c5cfe282e7b9d27e908f5a6c40291'
+        : '4d012059c79aa7250f4b22825487129da9291178b17bbf1dc970de119052dc8f');
+}
+
+/**
+ * Obter API Key do OctaDesk
+ * @return string API Key
+ */
+function getOctaDeskApiKey() {
+    return $_ENV['OCTADESK_API_KEY'] ?? 'b4e081fa-94ab-4456-8378-991bf995d3ea.d3e8e579-869d-4973-b34d-82391d08702b';
+}
+
+/**
+ * Obter URL base da API OctaDesk
+ * @return string URL base
+ */
+function getOctaDeskApiBase() {
+    $base = $_ENV['OCTADESK_API_BASE'] ?? '';
+    if (empty($base)) {
+        error_log('[CONFIG] ERRO CRÍTICO: OCTADESK_API_BASE não está definido nas variáveis de ambiente');
+        throw new RuntimeException('OCTADESK_API_BASE não está definido nas variáveis de ambiente');
+    }
+    return $base;
+}
+
+// ==================== ARRAY DE CONFIGURAÇÃO (COMPATIBILIDADE) ====================
+
+/**
+ * Obter array completo de configuração (para compatibilidade com código legado)
+ * @return array Array com todas as configurações
+ */
+function getConfig() {
+    return [
+        'environment' => getEnvironment(),
+        'is_dev' => isDevelopment(),
+        'is_prod' => isProduction(),
+        'base_dir' => getBaseDir(),
+        'base_url' => getBaseUrl(),
+        'cors' => [
+            'allowed_origins' => getCorsOrigins()
+        ],
+        'database' => getDatabaseConfig(),
+        'espocrm' => [
+            'url' => getEspoCrmUrl(),
+            'api_key' => getEspoCrmApiKey()
+        ],
+        'webflow' => [
+            'secret_flyingdonkeys' => getWebflowSecretFlyingDonkeys(),
+            'secret_octadesk' => getWebflowSecretOctaDesk()
+        ],
+        'octadesk' => [
+            'api_key' => getOctaDeskApiKey(),
+            'api_base' => getOctaDeskApiBase()
+        ]
+    ];
+}
+
+// Expor array global para compatibilidade (se necessário)
+$CONFIG = getConfig();
+
+// ==================== FUNÇÕES HELPER PARA INCLUDES ====================
+
+/**
+ * Incluir arquivo usando APP_BASE_DIR
+ * @param string $filePath Caminho relativo do arquivo (ex: 'class.php', 'ProfessionalLogger.php')
+ * @return bool true se incluído com sucesso
+ */
+function requireFile($filePath) {
+    $fullPath = getBaseDir() . '/' . ltrim($filePath, '/\\');
+    if (file_exists($fullPath)) {
+        require_once $fullPath;
+        return true;
+    }
+    error_log("Config: Arquivo não encontrado: $fullPath");
+    return false;
+}
+
+/**
+ * Construir URL de endpoint usando APP_BASE_URL
+ * @param string $endpoint Caminho do endpoint (ex: 'log_endpoint.php', '/add_flyingdonkeys.php')
+ * @return string URL completa
+ */
+function getEndpointUrl($endpoint) {
+    return getBaseUrl() . '/' . ltrim($endpoint, '/\\');
+}
+
+// ==================== CONSTANTES (OPCIONAL) ====================
+
+// Definir constantes se não existirem (para compatibilidade)
+if (!defined('APP_ENVIRONMENT')) {
+    define('APP_ENVIRONMENT', getEnvironment());
+}
+if (!defined('APP_BASE_DIR')) {
+    define('APP_BASE_DIR', getBaseDir());
+}
+if (!defined('APP_BASE_URL')) {
+    define('APP_BASE_URL', getBaseUrl());
+}

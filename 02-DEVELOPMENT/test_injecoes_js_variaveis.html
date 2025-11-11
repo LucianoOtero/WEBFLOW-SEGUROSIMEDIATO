@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Injeções JS com Variáveis de Ambiente</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #ddd;
+        }
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .warning {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 0; }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Injeções JS com Variáveis de Ambiente</h1>
+    
+    <div class="test-section">
+        <h2>1. Carregamento de config_env.js.php</h2>
+        <div id="test-config-env" class="test-item">
+            <p>Carregando config_env.js.php...</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Injeção de webflow_injection_limpo.js</h2>
+        <div id="test-webflow-injection" class="test-item">
+            <p>Aguardando carregamento...</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Injeção de MODAL_WHATSAPP_DEFINITIVO.js</h2>
+        <div id="test-modal-whatsapp" class="test-item">
+            <p>Aguardando carregamento...</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Verificação de Variáveis de Ambiente</h2>
+        <div id="test-variaveis" class="test-item">
+            <p>Verificando variáveis...</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Teste de Endpoints via JavaScript</h2>
+        <button onclick="testarEndpoints()">Testar Endpoints</button>
+        <div id="test-endpoints" class="test-item">
+            <p>Clique no botão para testar os endpoints.</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Log de Testes</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://dev.bssegurosimediato.com.br';
+        const log = [];
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            log.push(`[${timestamp}] ${message}`);
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = log.join('\\n');
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[TEST] ${message}`);
+        }
+        
+        function updateTestStatus(id, status, message) {
+            const div = document.getElementById(id);
+            div.className = `test-item ${status}`;
+            div.innerHTML = `<p><strong>${status === 'success' ? '✅' : status === 'error' ? '❌' : '⚠️'}</strong> ${message}</p>`;
+        }
+        
+        // Teste 1: Carregar config_env.js.php
+        addLog('Iniciando teste de carregamento de config_env.js.php...');
+        const configScript = document.createElement('script');
+        configScript.src = BASE_URL + '/config_env.js.php';
+        configScript.onload = () => {
+            addLog('config_env.js.php carregado com sucesso');
+            updateTestStatus('test-config-env', 'success', 
+                `config_env.js.php carregado. APP_BASE_URL: ${window.APP_BASE_URL || 'NÃO DEFINIDO'}`);
+            
+            if (window.APP_BASE_URL) {
+                // Teste 2: Injetar webflow_injection_limpo.js
+                addLog('Injetando webflow_injection_limpo.js...');
+                const webflowScript = document.createElement('script');
+                webflowScript.src = window.APP_BASE_URL + '/webflow_injection_limpo.js';
+                webflowScript.onload = () => {
+                    addLog('webflow_injection_limpo.js carregado com sucesso');
+                    updateTestStatus('test-webflow-injection', 'success', 
+                        'webflow_injection_limpo.js carregado e disponível');
+                };
+                webflowScript.onerror = () => {
+                    addLog('ERRO ao carregar webflow_injection_limpo.js', 'error');
+                    updateTestStatus('test-webflow-injection', 'error', 
+                        'Falha ao carregar webflow_injection_limpo.js');
+                };
+                document.head.appendChild(webflowScript);
+                
+                // Teste 3: Injetar MODAL_WHATSAPP_DEFINITIVO.js
+                addLog('Injetando MODAL_WHATSAPP_DEFINITIVO.js...');
+                const modalScript = document.createElement('script');
+                modalScript.src = window.APP_BASE_URL + '/MODAL_WHATSAPP_DEFINITIVO.js?v=24&force=' + Math.random();
+                modalScript.onload = () => {
+                    addLog('MODAL_WHATSAPP_DEFINITIVO.js carregado com sucesso');
+                    updateTestStatus('test-modal-whatsapp', 'success', 
+                        'MODAL_WHATSAPP_DEFINITIVO.js carregado e disponível');
+                };
+                modalScript.onerror = () => {
+                    addLog('ERRO ao carregar MODAL_WHATSAPP_DEFINITIVO.js', 'error');
+                    updateTestStatus('test-modal-whatsapp', 'error', 
+                        'Falha ao carregar MODAL_WHATSAPP_DEFINITIVO.js');
+                };
+                document.head.appendChild(modalScript);
+                
+                // Teste 4: Verificar variáveis
+                setTimeout(() => {
+                    verificarVariaveis();
+                }, 1000);
+            } else {
+                addLog('ERRO: APP_BASE_URL não foi definido', 'error');
+                updateTestStatus('test-config-env', 'error', 
+                    'APP_BASE_URL não foi definido após carregar config_env.js.php');
+            }
+        };
+        configScript.onerror = () => {
+            addLog('ERRO ao carregar config_env.js.php', 'error');
+            updateTestStatus('test-config-env', 'error', 
+                'Falha ao carregar config_env.js.php');
+        };
+        document.head.appendChild(configScript);
+        
+        function verificarVariaveis() {
+            addLog('Verificando variáveis de ambiente...');
+            const variaveis = {
+                'APP_BASE_URL': window.APP_BASE_URL,
+                'APP_ENVIRONMENT': window.APP_ENVIRONMENT,
+                'getEndpointUrl': typeof window.getEndpointUrl === 'function'
+            };
+            
+            let html = '<ul>';
+            let todasOk = true;
+            for (const [key, value] of Object.entries(variaveis)) {
+                const status = value ? '✅' : '❌';
+                html += `<li>${status} ${key}: ${value || 'NÃO DEFINIDO'}</li>`;
+                if (!value) todasOk = false;
+            }
+            html += '</ul>';
+            
+            updateTestStatus('test-variaveis', todasOk ? 'success' : 'error', 
+                todasOk ? 'Todas as variáveis estão disponíveis' : 'Algumas variáveis não estão disponíveis');
+            document.getElementById('test-variaveis').innerHTML += html;
+        }
+        
+        async function testarEndpoints() {
+            addLog('Iniciando testes de endpoints...');
+            const endpointsDiv = document.getElementById('test-endpoints');
+            endpointsDiv.innerHTML = '<p>Testando endpoints...</p>';
+            
+            if (!window.APP_BASE_URL) {
+                addLog('ERRO: APP_BASE_URL não disponível', 'error');
+                updateTestStatus('test-endpoints', 'error', 'APP_BASE_URL não disponível');
+                return;
+            }
+            
+            const endpoints = [
+                { nome: 'log_endpoint.php', path: '/log_endpoint.php', method: 'POST', data: {
+                    level: 'INFO', category: 'TEST', message: 'Teste de endpoint'
+                }},
+                { nome: 'cpf-validate.php', path: '/cpf-validate.php', method: 'POST', data: {
+                    cpf: '12345678900'
+                }},
+                { nome: 'placa-validate.php', path: '/placa-validate.php', method: 'POST', data: {
+                    placa: 'ABC1234'
+                }},
+                { nome: 'config_env.js.php', path: '/config_env.js.php', method: 'GET', data: null}
+            ];
+            
+            let html = '<ul>';
+            let sucessos = 0;
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const url = window.APP_BASE_URL + endpoint.path;
+                    addLog(`Testando ${endpoint.nome}...`);
+                    
+                    const options = {
+                        method: endpoint.method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors',
+                        credentials: 'omit'
+                    };
+                    
+                    if (endpoint.data) {
+                        options.body = JSON.stringify(endpoint.data);
+                    }
+                    
+                    const response = await fetch(url, options);
+                    const status = response.ok ? '✅' : '❌';
+                    html += `<li>${status} ${endpoint.nome}: HTTP ${response.status}</li>`;
+                    
+                    if (response.ok) {
+                        sucessos++;
+                        addLog(`${endpoint.nome}: SUCESSO (HTTP ${response.status})`);
+                    } else {
+                        addLog(`${endpoint.nome}: FALHA (HTTP ${response.status})`, 'error');
+                    }
+                } catch (error) {
+                    html += `<li>❌ ${endpoint.nome}: ERRO - ${error.message}</li>`;
+                    addLog(`${endpoint.nome}: ERRO - ${error.message}`, 'error');
+                }
+            }
+            
+            html += '</ul>';
+            html += `<p><strong>Resultado: ${sucessos}/${endpoints.length} endpoints funcionando</strong></p>`;
+            
+            endpointsDiv.innerHTML = html;
+            updateTestStatus('test-endpoints', sucessos === endpoints.length ? 'success' : 'warning', 
+                `${sucessos}/${endpoints.length} endpoints funcionando`);
+        }
+    </script>
+</body>
+</html>
+
