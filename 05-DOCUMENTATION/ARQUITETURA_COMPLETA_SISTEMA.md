@@ -344,7 +344,105 @@ function loadWhatsAppModal() {
 
 ---
 
+---
+
+## 📝 VARIÁVEIS DE AMBIENTE - LOG_DIR
+
+### **O que é LOG_DIR?**
+
+`LOG_DIR` é a variável de ambiente que define o diretório onde todos os arquivos de log do sistema são armazenados.
+
+### **Onde é Definida?**
+
+**Localização:** `/etc/php/8.3/fpm/pool.d/www.conf` (no servidor)
+
+**Variável:**
+```
+env[LOG_DIR] = /var/log/webflow-segurosimediato
+```
+
+**Como é usada:**
+- Carregada automaticamente em todas as requisições PHP via PHP-FPM
+- Acessível via `$_ENV['LOG_DIR']` em qualquer script PHP
+- Se não estiver definida, o código usa fallback: `getBaseDir() . '/logs'`
+
+### **Diretório Padrão**
+
+**DEV:** `/var/log/webflow-segurosimediato`  
+**PROD:** `/var/log/webflow-segurosimediato` (a definir quando procedimento for oficializado)
+
+**Permissões:**
+- Proprietário: `www-data:www-data`
+- Permissões: `0755` (rwxr-xr-x)
+- Gravável pelo PHP-FPM: ✅ Sim
+
+---
+
+## 📋 SISTEMA DE LOGGING
+
+### **Arquivos de Log do Sistema**
+
+Todos os arquivos de log são armazenados no diretório definido por `LOG_DIR` e respeitam a variável de ambiente usando o padrão:
+```php
+$logDir = $_ENV['LOG_DIR'] ?? getBaseDir() . '/logs';
+```
+
+#### **1. flyingdonkeys_dev.txt**
+- **Origem:** `add_flyingdonkeys.php`
+- **Quando:** Requisições webhook em ambiente DEV
+- **Formato:** JSON com prefixo `[DEV-FLYINGDONKEYS]`
+- **Conteúdo:** Eventos do webhook FlyingDonkeys (EspoCRM)
+- **Usa LOG_DIR:** ✅ Sim (`$_ENV['LOG_DIR'] ?? getBaseDir() . '/logs'`)
+- **Caminho:** `{LOG_DIR}/flyingdonkeys_dev.txt`
+
+#### **2. flyingdonkeys_prod.txt**
+- **Origem:** `add_flyingdonkeys.php`
+- **Quando:** Requisições webhook em ambiente PROD
+- **Formato:** JSON com prefixo `[PROD-FLYINGDONKEYS]`
+- **Conteúdo:** Eventos do webhook FlyingDonkeys (EspoCRM)
+- **Usa LOG_DIR:** ✅ Sim (`$_ENV['LOG_DIR'] ?? getBaseDir() . '/logs'`)
+- **Caminho:** `{LOG_DIR}/flyingdonkeys_prod.txt`
+
+#### **3. webhook_octadesk_prod.txt**
+- **Origem:** `add_webflow_octa.php`
+- **Quando:** Requisições webhook OctaDesk
+- **Formato:** Texto com prefixo `[OCTADESK-PROD]`
+- **Conteúdo:** Eventos do webhook OctaDesk (WhatsApp)
+- **Usa LOG_DIR:** ✅ Sim (`$_ENV['LOG_DIR'] ?? getBaseDir() . '/logs'`)
+- **Caminho:** `{LOG_DIR}/webhook_octadesk_prod.txt`
+
+#### **4. professional_logger_errors.txt**
+- **Origem:** `ProfessionalLogger.php`
+- **Quando:** Erros ao inserir logs no banco de dados
+- **Formato:** Texto com timestamp
+- **Conteúdo:** Erros críticos do sistema de logging profissional
+- **Usa LOG_DIR:** ✅ Sim (`$_ENV['LOG_DIR'] ?? getBaseDir() . '/logs'`)
+- **Caminho:** `{LOG_DIR}/professional_logger_errors.txt`
+
+#### **5. log_endpoint_debug.txt**
+- **Origem:** `log_endpoint.php`
+- **Quando:** Debugging do endpoint de logging
+- **Formato:** Texto com timestamp e informações de memória
+- **Conteúdo:** Logs de debug do endpoint de logging
+- **Usa LOG_DIR:** ✅ Sim (`$_ENV['LOG_DIR'] ?? getBaseDir() . '/logs'`)
+- **Caminho:** `{LOG_DIR}/log_endpoint_debug.txt`
+
+### **Verificação de Conformidade**
+
+✅ **Todos os arquivos de log respeitam `LOG_DIR`** usando o padrão:
+```php
+$logDir = $_ENV['LOG_DIR'] ?? getBaseDir() . '/logs';
+```
+
+**Arquivos verificados:**
+- ✅ `add_flyingdonkeys.php`
+- ✅ `add_webflow_octa.php`
+- ✅ `ProfessionalLogger.php`
+- ✅ `log_endpoint.php`
+
+---
+
 **Documento criado em:** 08/11/2025  
-**Última atualização:** 08/11/2025  
-**Versão:** 1.0
+**Última atualização:** 12/11/2025  
+**Versão:** 2.0
 
