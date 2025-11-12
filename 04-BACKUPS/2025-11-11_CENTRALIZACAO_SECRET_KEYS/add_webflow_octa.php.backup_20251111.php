@@ -54,8 +54,7 @@ header('X-Webhook: octadesk-v2');
 $OCTADESK_API_KEY = 'b4e081fa-94ab-4456-8378-991bf995d3ea.d3e8e579-869d-4973-b34d-82391d08702b';
 $API_BASE = 'https://o205242-d60.api004.octadesk.services';
 $OCTADESK_FROM = '+551132301422';
-// Usar função de config.php (prioriza $_ENV do PHP-FPM)
-$WEBFLOW_SECRET_OCTADESK = getWebflowSecretOctaDesk();
+$WEBFLOW_SECRET_OCTADESK = '4d012059c79aa7250f4b22825487129da9291178b17bbf1dc970de119052dc8f'; // ✅ Secret obtido do Webflow Dashboard
 
 // Log específico do webhook de produção
 function logProdWebhook($action, $data = null, $success = true)

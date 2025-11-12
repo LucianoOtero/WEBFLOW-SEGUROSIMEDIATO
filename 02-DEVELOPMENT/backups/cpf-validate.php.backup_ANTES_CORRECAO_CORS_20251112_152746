@@ -1,17 +1,13 @@
 <?php
-// Incluir config.php ANTES de qualquer header ou output para usar setCorsHeaders()
-require_once __DIR__ . '/config.php';
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 
-// Headers CORS (usar função do config.php para evitar duplicação com Nginx)
-// IMPORTANTE: Headers devem ser enviados ANTES de qualquer output
-header('Content-Type: application/json; charset=utf-8');
-// Usar setCorsHeaders() do config.php - valida origem e envia apenas um valor no header
-setCorsHeaders();
-// Adicionar headers específicos após setCorsHeaders() se necessário
-header('Access-Control-Allow-Headers: Content-Type');
-
-// Nota: setCorsHeaders() já trata requisições OPTIONS (preflight) e envia os headers corretos
-// Não é necessário código adicional para OPTIONS
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit;
+}
 
 $input = json_decode(file_get_contents('php://input'), true);
 $cpf = $input['cpf'] ?? '';

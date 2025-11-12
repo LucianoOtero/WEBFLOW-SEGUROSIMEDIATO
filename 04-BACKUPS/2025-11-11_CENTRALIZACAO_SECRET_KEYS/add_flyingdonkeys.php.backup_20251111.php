@@ -63,23 +63,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
 // Usar getBaseDir() para diretórios de log
 $logDir = $_ENV['LOG_DIR'] ?? getBaseDir() . '/logs';
 
-// Usar função de config.php (prioriza $_ENV do PHP-FPM)
-$WEBFLOW_SECRET_TRAVELANGELS = getWebflowSecretFlyingDonkeys();
-
-// Detectar ambiente baseado em variável de ambiente
-$ENVIRONMENT = isDevelopment() ? 'development' : 'production';
-$LOG_PREFIX = isDevelopment() ? '[DEV-FLYINGDONKEYS] ' : '[PROD-FLYINGDONKEYS] ';
-
-// Configurar arquivo de log
-if (isDevelopment()) {
-    // Se dev_config.php existir e tiver configuração de log, usar
-    if (isset($DEV_LOGGING) && !empty($DEV_LOGGING['flyingdonkeys'])) {
-        $DEBUG_LOG_FILE = $DEV_LOGGING['flyingdonkeys'];
-    } else {
+if ($is_dev && isset($DEV_WEBFLOW_SECRETS) && isset($DEV_LOGGING)) {
+    // AMBIENTE DE DESENVOLVIMENTO
+    $WEBFLOW_SECRET_TRAVELANGELS = $DEV_WEBFLOW_SECRETS['flyingdonkeys'] ?? $DEV_WEBFLOW_SECRETS['travelangels'] ?? '';
+    if (empty($DEV_LOGGING['flyingdonkeys'])) {
         $DEBUG_LOG_FILE = rtrim($logDir, '/\\') . '/flyingdonkeys_dev.txt';
+    } else {
+        $DEBUG_LOG_FILE = $DEV_LOGGING['flyingdonkeys'];
     }
+    $LOG_PREFIX = '[DEV-FLYINGDONKEYS] ';
+    $ENVIRONMENT = 'development';
 } else {
+    // AMBIENTE DE PRODUÇÃO
+    $WEBFLOW_SECRET_TRAVELANGELS = 'ce051cb1d819faac5837f4e47a7fdd8cf2a8b248a2b3ecdb9ab358cfb9ed7990';
     $DEBUG_LOG_FILE = rtrim($logDir, '/\\') . '/flyingdonkeys_prod.txt';
+    $LOG_PREFIX = '[PROD-FLYINGDONKEYS] ';
+    $ENVIRONMENT = 'production';
 }
 
 // Headers de resposta

@@ -755,7 +755,7 @@ Após a correção:
 - **Documento de Pesquisa:** `02-DEVELOPMENT/PESQUISA_SOLUCOES_VALIDADAS_FONTES_REFERENCIA.md`
 - **Análise de Riscos:** `02-DEVELOPMENT/ANALISE_RISCOS_SOLUCOES_IOS_ANDROID_DESKTOP.md`
 - **Análise do Problema:** `02-DEVELOPMENT/ANALISE_MODAL_ABRINDO_NOVA_ABA_IOS.md` (se existir)
-- **Diretivas de Projetos:** `DIRETIVAS_PROJETOS.md`
+- **Diretivas de Projetos:** `.cursorrules` (fonte única de diretivas)
 
 ---
 
