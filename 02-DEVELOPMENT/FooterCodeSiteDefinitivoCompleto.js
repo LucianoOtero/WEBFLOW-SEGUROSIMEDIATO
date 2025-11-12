@@ -240,7 +240,7 @@
   // ⚠️ AMBIENTE: DESENVOLVIMENTO
   window.USE_PHONE_API = true;
   window.APILAYER_KEY = 'dce92fa84152098a3b5b7b8db24debbc';
-  window.SAFETY_TICKET = 'fc5e18c10c4aa883b2c31a305f1c09fea3834138'; // DEV: Ticket origem correto (segurosimediato-8119bf26e77bf4ff336a58e.webflow.io)
+  window.SAFETY_TICKET = '05bf2ec47128ca0b917f8b955bada1bd3cadd47e'; // DEV: Ticket origem atualizado
   window.SAFETY_API_KEY = '20a7a1c297e39180bd80428ac13c363e882a531f'; // Mesmo para DEV e PROD
   window.VALIDAR_PH3A = false;
   // ======================
@@ -1232,39 +1232,300 @@
    * @returns {Promise<Object|null>} Resposta da API ou null
    */
   async function validarEmailSafetyMails(email) {
+    // LOG 1: Início da função
+    window.logInfo('SAFETYMAILS', '🔍 Iniciando validação SafetyMails', { email: email });
+    
     try {
+      // Verificar funções necessárias
       if (typeof window.sha1 !== 'function' || typeof window.hmacSHA256 !== 'function') {
-        window.logError('UTILS', '❌ sha1 ou hmacSHA256 não disponíveis');
+        window.logError('SAFETYMAILS', '❌ sha1 ou hmacSHA256 não disponíveis');
         return null;
       }
       
+      // Verificar credenciais
       if (typeof window.SAFETY_TICKET === 'undefined' || typeof window.SAFETY_API_KEY === 'undefined') {
-        window.logWarn('UTILS', '⚠️ SAFETY_TICKET ou SAFETY_API_KEY não disponíveis');
+        window.logWarn('SAFETYMAILS', '⚠️ SAFETY_TICKET ou SAFETY_API_KEY não disponíveis');
         return null;
       }
       
+      // LOG 2: Credenciais disponíveis
+      window.logInfo('SAFETYMAILS', '✅ Credenciais disponíveis', {
+        SAFETY_TICKET: window.SAFETY_TICKET ? `${window.SAFETY_TICKET.substring(0, 8)}...` : 'undefined',
+        SAFETY_API_KEY: window.SAFETY_API_KEY ? `${window.SAFETY_API_KEY.substring(0, 8)}...` : 'undefined'
+      });
+      
+      // Construir URL e HMAC
       const code = await window.sha1(window.SAFETY_TICKET);
+      const SAFETYMAILS_BASE_DOMAIN = window.SAFETYMAILS_BASE_DOMAIN || 'safetymails.com';
       const url = `https://${window.SAFETY_TICKET}.${SAFETYMAILS_BASE_DOMAIN}/api/${code}`;
       const hmac = await window.hmacSHA256(email, window.SAFETY_API_KEY);
 
+      // LOG 3: URL e dados preparados
+      window.logInfo('SAFETYMAILS', '📤 Preparando requisição', {
+        url: url,
+        email: email,
+        hmac: hmac ? `${hmac.substring(0, 16)}...` : 'null',
+        code: code ? `${code.substring(0, 16)}...` : 'null'
+      });
+
+      // Preparar FormData
       let form = new FormData();
       form.append('email', email);
 
+      // LOG 4: Dados enviados
+      window.logInfo('SAFETYMAILS', '📨 Enviando requisição', {
+        method: 'POST',
+        url: url,
+        headers: {
+          'Sf-Hmac': hmac ? `${hmac.substring(0, 16)}...` : 'null'
+        },
+        body: {
+          email: email
+        }
+      });
+
+      // Fazer requisição
       const response = await fetch(url, {
         method: "POST",
         headers: { "Sf-Hmac": hmac },
         body: form
       });
       
+      // LOG 5: Resposta HTTP recebida
+      window.logInfo('SAFETYMAILS', '📥 Resposta HTTP recebida', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
       if (!response.ok) {
-        window.logError('UTILS', `SafetyMails HTTP Error: ${response.status}`);
+        // LOG 6: Erro HTTP
+        window.logError('SAFETYMAILS', `❌ SafetyMails HTTP Error: ${response.status}`, {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          email: email
+        });
+        
+        // Tentar ler corpo da resposta para mais detalhes
+        try {
+          const errorText = await response.text();
+          window.logError('SAFETYMAILS', '📄 Corpo da resposta de erro', {
+            errorText: errorText.substring(0, 500) // Limitar tamanho
+          });
+        } catch (e) {
+          window.logWarn('SAFETYMAILS', '⚠️ Não foi possível ler corpo da resposta de erro');
+        }
+        
         return null;
       }
       
-      const data = await response.json();
-      return data.Success ? data : null;
+      // Ler dados da resposta
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        window.logError('SAFETYMAILS', '❌ Erro ao parsear resposta JSON', {
+          error: e.message,
+          email: email
+        });
+        return null;
+      }
+      
+      // LOG 7: Dados recebidos da API (com todos os campos disponíveis)
+      window.logInfo('SAFETYMAILS', '📥 Dados recebidos da API', {
+        success: data?.Success,
+        status: data?.Status,
+        domainStatus: data?.DomainStatus,
+        advice: data?.Advice,
+        idStatus: data?.IdStatus,
+        idAdvice: data?.IdAdvice,
+        email: data?.Email,
+        balance: data?.Balance,
+        environment: data?.Environment,
+        method: data?.Method,
+        limited: data?.Limited,
+        public: data?.Public,
+        mx: data?.Mx,
+        referer: data?.Referer,
+        data: data // Log completo dos dados
+      });
+      
+      // LOG 8: Verificar Success primeiro (antes de calcular isValid)
+      // ⚠️ IMPORTANTE: Success: true não significa email válido!
+      // Mas se Success: false, a requisição falhou e não devemos continuar
+      if (!data || !data.Success) {
+        window.logWarn('SAFETYMAILS', '⚠️ Requisição não foi bem-sucedida', {
+          email: email,
+          success: data?.Success,
+          status: data?.Status,
+          domainStatus: data?.DomainStatus,
+          advice: data?.Advice,
+          balance: data?.Balance,
+          environment: data?.Environment,
+          data: data
+        });
+        return null;
+      }
+      
+      // LOG 9: Análise detalhada da validação (só se Success é true)
+      // Validação baseada em múltiplos indicadores conforme documentação SafetyMails
+      const status = data.Status || '';
+      const domainStatus = data.DomainStatus || '';
+      const advice = data.Advice || '';
+      const idStatus = data.IdStatus;
+      const idAdvice = data.IdAdvice;
+      
+      // Indicadores de validade (conforme REFERENCIA_API_SAFETYMAILS.md)
+      const isValid = status === 'VALIDO';
+      const isDomainValid = domainStatus === 'VALIDO';
+      const isAdviceValid = advice === 'Valid';
+      const isValidIdStatus = idStatus === 9000;
+      const isValidIdAdvice = idAdvice === 5200;
+      
+      // Análise de status pendente/desconhecido
+      const isPending = status === 'PENDENTE' || domainStatus === 'UNKNOWN' || advice === 'Unknown';
+      const isInvalid = status === 'INVALIDO' || domainStatus === 'INVALIDO' || advice === 'Invalid';
+      
+      // Informações adicionais da resposta
+      const balance = data.Balance;
+      const environment = data.Environment || 'UNKNOWN';
+      const method = data.Method || 'UNKNOWN';
+      const limited = data.Limited === true;
+      const isPublic = data.Public === true;
+      const mxRecords = data.Mx || '';
+      
+      window.logInfo('SAFETYMAILS', '🔍 Análise detalhada da validação', {
+        email: email,
+        success: data.Success,
+        // Campos principais
+        status: status,
+        domainStatus: domainStatus,
+        advice: advice,
+        idStatus: idStatus,
+        idAdvice: idAdvice,
+        // Indicadores calculados
+        isValid: isValid,
+        isDomainValid: isDomainValid,
+        isAdviceValid: isAdviceValid,
+        isValidIdStatus: isValidIdStatus,
+        isValidIdAdvice: isValidIdAdvice,
+        isPending: isPending,
+        isInvalid: isInvalid,
+        // Informações adicionais
+        balance: balance,
+        environment: environment,
+        method: method,
+        limited: limited,
+        public: isPublic,
+        mxRecords: mxRecords ? `${mxRecords.substring(0, 50)}...` : 'N/A',
+        // Conclusão
+        conclusao: isValid ? 'EMAIL VÁLIDO' : (isPending ? 'EMAIL PENDENTE/DESCONHECIDO' : 'EMAIL NÃO VÁLIDO')
+      });
+      
+      // LOG 10: Verificação de saldo e limitações
+      if (balance !== undefined) {
+        if (balance <= 0) {
+          window.logWarn('SAFETYMAILS', '⚠️ Saldo da conta SafetyMails zerado ou negativo', {
+            email: email,
+            balance: balance
+          });
+        } else if (balance < 100) {
+          window.logWarn('SAFETYMAILS', '⚠️ Saldo da conta SafetyMails abaixo de 100 créditos', {
+            email: email,
+            balance: balance
+          });
+        }
+      }
+      
+      if (limited) {
+        window.logWarn('SAFETYMAILS', '⚠️ Validação limitada (Limited: true)', {
+          email: email,
+          limited: limited
+        });
+      }
+      
+      // LOG 11: Resultado final
+      // ⚠️ IMPORTANTE: Success: true não significa email válido!
+      // Mas se Success: true, sempre retornar objeto completo para handler decidir qual SweetAlert mostrar
+      // Retornar null apenas se requisição falhou (Success: false)
+
+      // Verificar Success primeiro (já verificado antes, mas garantir)
+      if (!data || !data.Success) {
+        // Requisição falhou - retornar null
+        window.logWarn('SAFETYMAILS', '⚠️ Requisição não foi bem-sucedida', {
+          email: email,
+          success: data?.Success,
+          status: data?.Status,
+          domainStatus: data?.DomainStatus,
+          advice: data?.Advice
+        });
+        return null;
+      }
+
+      // Success é true - sempre retornar objeto completo
+      // Handler decidirá qual SweetAlert mostrar baseado em Status, DomainStatus, Advice
+      if (isValid) {
+        window.logInfo('SAFETYMAILS', '✅ Email válido confirmado', {
+          email: email,
+          status: status,
+          domainStatus: domainStatus,
+          advice: advice,
+          idStatus: idStatus,
+          idAdvice: idAdvice,
+          balance: balance,
+          environment: environment,
+          method: method,
+          resultado: {
+            Status: status,
+            DomainStatus: domainStatus,
+            Advice: advice,
+            IdStatus: idStatus,
+            IdAdvice: idAdvice
+          }
+        });
+      } else {
+        // Email não é válido (mesmo que Success: true)
+        // Pode ser PENDENTE, INVALIDO ou outro status não válido
+        const motivo = isPending 
+          ? `Status: ${status} (PENDENTE/DESCONHECIDO)`
+          : isInvalid
+          ? `Status: ${status} (INVALIDO)`
+          : `Status: ${status} (esperado: "VALIDO")`;
+        
+        window.logWarn('SAFETYMAILS', '⚠️ Email não válido (mesmo com Success: true)', {
+          email: email,
+          status: status,
+          domainStatus: domainStatus,
+          advice: advice,
+          idStatus: idStatus,
+          idAdvice: idAdvice,
+          isPending: isPending,
+          isInvalid: isInvalid,
+          motivo: motivo,
+          resultado: {
+            Status: status,
+            DomainStatus: domainStatus,
+            Advice: advice,
+            IdStatus: idStatus,
+            IdAdvice: idAdvice
+          }
+        });
+      }
+
+      // Sempre retornar objeto completo quando Success é true
+      // Handler decidirá qual SweetAlert mostrar baseado nos campos Status, DomainStatus, Advice
+      return data;
     } catch (error) {
-      window.logError('UTILS', 'SafetyMails request failed:', error);
+      // LOG 12: Erro de exceção
+      window.logError('SAFETYMAILS', '❌ SafetyMails request failed', {
+        error: error.message,
+        stack: error.stack,
+        email: email,
+        errorName: error.name,
+        errorType: typeof error
+      });
       return null;
     }
   }
@@ -2160,12 +2421,21 @@
         // E-MAIL → change (regex bloqueia; SafetyMails só avisa)
         $EMAIL.on('change.siMail', function(){
           const v = ($(this).val()||'').trim();
+          // LOG DE DIAGNÓSTICO: Handler executado
+          window.logInfo('FOOTER', '🔍 Handler change.siMail executado', {
+            email: v,
+            campoVazio: !v,
+            timestamp: new Date().toISOString()
+          });
           if (!v) return;
           if (typeof window.validarEmailLocal !== 'function') {
             window.logError('FOOTER', '❌ validarEmailLocal não disponível');
             return;
           }
+          // LOG DE DIAGNÓSTICO: Validação local
+          window.logInfo('FOOTER', '🔍 Iniciando validação local', { email: v });
           if (!window.validarEmailLocal(v)){
+            window.logWarn('FOOTER', '⚠️ Validação local falhou', { email: v });
             saWarnConfirmCancel({
               title: 'E-mail inválido',
               html: `O e-mail informado:<br><br><b>${v}</b><br><br>não parece válido.<br><br>Deseja corrigir?`,
@@ -2174,18 +2444,64 @@
             }).then(r=>{ if (r.isConfirmed) $EMAIL.focus(); });
             return;
           }
+          window.logInfo('FOOTER', '✅ Validação local passou', { email: v });
           // Aviso opcional via SafetyMails (não bloqueia)
+          // LOG DE DIAGNÓSTICO: Verificar se função está disponível
+          window.logInfo('FOOTER', '🔍 Verificando função SafetyMails', {
+            email: v,
+            validacaoLocalPassou: true,
+            funcaoExiste: typeof window.validarEmailSafetyMails === 'function',
+            tipoFuncao: typeof window.validarEmailSafetyMails,
+            funcaoDefinida: window.validarEmailSafetyMails !== undefined
+          });
+          
           if (typeof window.validarEmailSafetyMails === 'function') {
+            window.logInfo('FOOTER', '✅ Função SafetyMails disponível, chamando...', { email: v });
             window.validarEmailSafetyMails(v).then(resp=>{
-              if (resp && resp.StatusEmail && resp.StatusEmail !== 'VALIDO'){
-                saWarnConfirmCancel({
-                  title: 'Atenção',
-                  html: `O e-mail informado:<br><br><b>${v}</b><br><br>pode não ser válido segundo verificador externo.<br><br>Deseja corrigir?`,
-                  cancelButtonText: 'Manter',
-                  confirmButtonText: 'Corrigir'
-                }).then(r=>{ if (r.isConfirmed) $EMAIL.focus(); });
+              if (resp && resp.Status) {
+                const status = resp.Status;
+                const domainStatus = resp.DomainStatus;
+                const advice = resp.Advice;
+                
+                // Email inválido (Status: "INVALIDO")
+                if (status === 'INVALIDO' || domainStatus === 'INVALIDO' || advice === 'Invalid') {
+                  saWarnConfirmCancel({
+                    title: 'E-mail Inválido',
+                    html: `O e-mail informado:<br><br><b>${v}</b><br><br>não é válido segundo nosso verificador.<br><br>Por favor, verifique se digitou corretamente ou use outro endereço de e-mail.`,
+                    cancelButtonText: 'Manter',
+                    confirmButtonText: 'Corrigir',
+                    icon: 'error'
+                  }).then(r=>{ if (r.isConfirmed) $EMAIL.focus(); });
+                }
+                // Email pendente/desconhecido (Status: "PENDENTE")
+                else if (status === 'PENDENTE' || domainStatus === 'UNKNOWN' || advice === 'Unknown') {
+                  saWarnConfirmCancel({
+                    title: 'E-mail Não Verificado',
+                    html: `Não foi possível verificar o e-mail:<br><br><b>${v}</b><br><br>O endereço pode estar correto, mas nosso verificador não conseguiu confirmá-lo no momento.<br><br>Deseja corrigir ou prosseguir com este e-mail?`,
+                    cancelButtonText: 'Prosseguir',
+                    confirmButtonText: 'Corrigir',
+                    icon: 'warning'
+                  }).then(r=>{ if (r.isConfirmed) $EMAIL.focus(); });
+                }
+                // Email válido (Status: "VALIDO"): não mostrar alerta
+                // else if (status === 'VALIDO') { /* não fazer nada - continuar fluxo normalmente */ }
               }
-            }).catch(()=>{ /* silêncio em erro externo */ });
+            }).catch((error)=>{
+              // LOG DE ERRO: Capturar erros silenciosos
+              window.logError('FOOTER', '❌ Erro ao chamar SafetyMails', {
+                email: v,
+                error: error.message,
+                stack: error.stack
+              });
+            });
+          } else {
+            // LOG DE AVISO: Função não disponível
+            window.logWarn('FOOTER', '⚠️ Função SafetyMails não disponível', {
+              email: v,
+              tipo: typeof window.validarEmailSafetyMails,
+              funcaoDefinida: window.validarEmailSafetyMails !== undefined,
+              todasFuncoes: Object.keys(window).filter(k => k.includes('validarEmail'))
+            });
           }
         });
 
