@@ -1,7 +1,24 @@
 # 🏗️ ARQUITETURA COMPLETA DO SISTEMA
 
 **Data:** 08/11/2025  
+**Última Atualização:** 11/11/2025  
 **Status:** ✅ **DOCUMENTAÇÃO COMPLETA**
+
+---
+
+## 🖥️ SERVIDORES
+
+### **Servidor DEV:**
+- **IP:** `65.108.156.14`
+- **Domínio:** `dev.bssegurosimediato.com.br`
+- **URL Base:** `https://dev.bssegurosimediato.com.br`
+
+### **Servidor PROD:**
+- **IP:** `157.180.36.223`
+- **Domínio:** `prod.bssegurosimediato.com.br`
+- **URL Base:** `https://prod.bssegurosimediato.com.br`
+
+📖 **Para detalhes completos dos servidores, consulte:** `ARQUITETURA_SERVIDORES.md`
 
 ---
 

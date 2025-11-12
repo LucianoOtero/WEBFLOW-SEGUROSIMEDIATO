@@ -12,7 +12,7 @@
 | Variável | Descrição | Exemplo (DEV) | Exemplo (PROD) |
 |----------|-----------|---------------|----------------|
 | `APP_BASE_DIR` | **Diretório físico no servidor** onde estão os arquivos `.php` e `.js` | `/var/www/html/dev/root` | `/var/www/html/prod/root` |
-| `APP_BASE_URL` | **URL base HTTP** para acessar os arquivos `.php` e `.js` via browser | `https://dev.bssegurosimediato.com.br` | `https://bssegurosimediato.com.br` |
+| `APP_BASE_URL` | **URL base HTTP** para acessar os arquivos `.php` e `.js` via browser | `https://dev.bssegurosimediato.com.br` | `https://prod.bssegurosimediato.com.br` |
 
 ---
 
@@ -28,7 +28,7 @@
 **PROD:**
 - **Diretório físico:** `/var/www/html/prod/root/` (dentro do container)
 - **Mapeamento no host:** `/opt/webhooks-server/prod/root/`
-- **URL de acesso:** `https://bssegurosimediato.com.br/`
+- **URL de acesso:** `https://prod.bssegurosimediato.com.br/`
 
 ### **Estrutura do Diretório:**
 ```
