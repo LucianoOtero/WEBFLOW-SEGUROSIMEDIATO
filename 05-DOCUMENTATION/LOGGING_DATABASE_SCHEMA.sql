@@ -28,7 +28,7 @@ CREATE TABLE application_logs (
     server_time DECIMAL(20,6) NOT NULL COMMENT 'Unix timestamp com microsegundos',
     
     -- Nível e Categoria
-    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL') NOT NULL DEFAULT 'INFO',
+    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE') NOT NULL DEFAULT 'INFO',
     category VARCHAR(50) NULL COMMENT 'Categoria do log (UTILS, MODAL, RPA, etc.)',
     
     -- Localização do Código
@@ -89,7 +89,7 @@ CREATE TABLE application_logs_archive (
     timestamp DATETIME(6) NOT NULL,
     client_timestamp DATETIME(6) NULL,
     server_time DECIMAL(20,6) NOT NULL,
-    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL') NOT NULL DEFAULT 'INFO',
+    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE') NOT NULL DEFAULT 'INFO',
     category VARCHAR(50) NULL,
     file_name VARCHAR(255) NOT NULL,
     file_path TEXT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE application_logs_archive (
 CREATE TABLE log_statistics (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     date DATE NOT NULL,
-    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL') NOT NULL,
+    level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE') NOT NULL,
     count INT UNSIGNED NOT NULL DEFAULT 0,
     file_name VARCHAR(255) NULL,
     environment ENUM('development', 'production', 'staging') NOT NULL,
@@ -181,7 +181,7 @@ CREATE PROCEDURE sp_insert_log(
     IN p_timestamp DATETIME(6),
     IN p_client_timestamp DATETIME(6),
     IN p_server_time DECIMAL(20,6),
-    IN p_level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'),
+    IN p_level ENUM('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE'),
     IN p_category VARCHAR(50),
     IN p_file_name VARCHAR(255),
     IN p_file_path TEXT,

@@ -99,3 +99,4 @@ Ambos os webhooks falharam na validação de assinatura (`signature_invalid`). I
 **Data da Verificação:** 2025-11-12  
 **Status LOG_DIR:** ✅ **CORRETO** - Logs sendo escritos em `/var/log/webflow-segurosimediato/`
 
+

@@ -32,8 +32,12 @@ $(function() {
   // ======================
   // Usar constantes globais se disponíveis, senão definir localmente com fallback
   
-  // APIs Externas (verificar se já estão definidas globalmente)
-  const VIACEP_BASE_URL = window.VIACEP_BASE_URL || 'https://viacep.com.br';
+  // APIs Externas (usando variáveis de ambiente - sem fallbacks)
+  if (!window.VIACEP_BASE_URL) {
+    throw new Error('[CONFIG] ERRO CRÍTICO: VIACEP_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
+  }
+  const VIACEP_BASE_URL = window.VIACEP_BASE_URL;
+  // WhatsApp API pode ter fallback (não crítico para segurança)
   const WHATSAPP_API_BASE = window.WHATSAPP_API_BASE || 'https://api.whatsapp.com';
   
   // ======================
@@ -41,6 +45,14 @@ $(function() {
   // ======================
   
   // ==================== CONSTANTES E CONFIGURAÇÕES ====================
+  
+  // Validação fail-fast: garantir que variáveis globais estão disponíveis
+  if (!window.WHATSAPP_PHONE) {
+    throw new Error('[CONFIG] ERRO CRÍTICO: window.WHATSAPP_PHONE não está definido. Carregue FooterCodeSiteDefinitivoCompleto.js ANTES deste script.');
+  }
+  if (!window.WHATSAPP_DEFAULT_MESSAGE) {
+    throw new Error('[CONFIG] ERRO CRÍTICO: window.WHATSAPP_DEFAULT_MESSAGE não está definido. Carregue FooterCodeSiteDefinitivoCompleto.js ANTES deste script.');
+  }
   
   const MODAL_CONFIG = {
     selectors: {
@@ -61,8 +73,8 @@ $(function() {
       endereco: '#ENDERECO-MODAL'
     },
     whatsapp: {
-      phone: '551132301422',
-      message: 'Olá! Quero uma cotação de seguro.'
+      phone: window.WHATSAPP_PHONE,
+      message: window.WHATSAPP_DEFAULT_MESSAGE
     }
   };
   
@@ -123,8 +135,8 @@ $(function() {
     
     // SOLUÇÃO DEFINITIVA: HARDCODE para webflow.io (SEMPRE desenvolvimento)
     if (hostname.indexOf('webflow.io') !== -1) {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'ENV', 'Hardcode DEV: webflow.io detectado', null, 'INIT', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'ENV', 'Hardcode DEV: webflow.io detectado', null, 'INIT', 'SIMPLE');
       }
       return true;
     }
@@ -133,15 +145,15 @@ $(function() {
     if (hostname.includes('dev.') || 
         hostname.includes('localhost') ||
         hostname.includes('127.0.0.1')) {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'ENV', 'DEV via hostname padrão', null, 'INIT', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'ENV', 'DEV via hostname padrão', null, 'INIT', 'SIMPLE');
       }
       return true;
     }
     
     if (href.includes('/dev/')) {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'ENV', 'DEV via URL path', null, 'INIT', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'ENV', 'DEV via URL path', null, 'INIT', 'SIMPLE');
       }
       return true;
     }
@@ -149,22 +161,22 @@ $(function() {
     // Parâmetro GET para forçar dev
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('env') === 'dev' || urlParams.get('dev') === '1') {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'ENV', 'DEV via parâmetro GET', null, 'INIT', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'ENV', 'DEV via parâmetro GET', null, 'INIT', 'SIMPLE');
       }
       return true;
     }
     
     // Variável global
     if (typeof window.ENVIRONMENT !== 'undefined' && window.ENVIRONMENT === 'development') {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'ENV', 'DEV via variável global', null, 'INIT', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'ENV', 'DEV via variável global', null, 'INIT', 'SIMPLE');
       }
       return true;
     }
     
-    if (window.logClassified) {
-      window.logClassified('INFO', 'ENV', 'PRODUÇÃO detectado', null, 'INIT', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('INFO', 'ENV', 'PRODUÇÃO detectado', null, 'INIT', 'SIMPLE');
     }
     return false;
   }
@@ -177,8 +189,8 @@ $(function() {
   function getEndpointUrl(endpoint) {
     // Aguardar APP_BASE_URL estar disponível (com timeout)
     if (!window.APP_BASE_URL) {
-      if (window.logClassified) {
-        window.logClassified('ERROR', 'ENDPOINT', 'APP_BASE_URL não disponível', null, 'ERROR_HANDLING', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('ERROR', 'ENDPOINT', 'APP_BASE_URL não disponível', null, 'ERROR_HANDLING', 'SIMPLE');
       }
       throw new Error('APP_BASE_URL não disponível para construir endpoint');
     }
@@ -255,25 +267,16 @@ $(function() {
       environment: isDevelopmentEnvironment() ? 'dev' : 'prod'
     };
     
-    // Log usando sistema classificado (sem dados sensíveis completos)
-    if (window.logClassified) {
+    // Log usando sistema unificado
+    if (window.novo_log) {
       const logLevel = severity === 'error' ? 'ERROR' : severity === 'warning' ? 'WARN' : 'INFO';
-      window.logClassified(logLevel, 'MODAL', `[${severity.toUpperCase()}] ${eventType}`, {
+      window.novo_log(logLevel, 'MODAL', `[${severity.toUpperCase()}] ${eventType}`, {
         has_ddd: !!data.ddd,
         has_celular: !!data.celular,
         has_cpf: !!data.cpf,
         has_nome: !!data.nome,
         environment: logData.environment
       }, 'OPERATION', 'SIMPLE');
-    }
-    
-    // Enviar para sistema de logging se disponível
-    try {
-      if (typeof window.logDebug === 'function') {
-        window.logDebug(severity.toUpperCase(), `[MODAL] ${eventType}`, logData);
-      }
-    } catch (e) {
-      // Falha silenciosa em logging
     }
   }
   
@@ -332,35 +335,9 @@ $(function() {
     // Log formatado usando sistema classificado
     const logMessage = `${emoji} [${category}] ${action}`;
     
-    // Usar logClassified se disponível, respeitando DEBUG_CONFIG
-    if (window.logClassified) {
-      const logLevel = level === 'error' ? 'ERROR' : level === 'warn' ? 'WARN' : level === 'debug' ? 'DEBUG' : 'INFO';
-      window.logClassified(logLevel, category, action, formattedData, 'OPERATION', 'MEDIUM');
-    } else {
-      // Fallback para console.* apenas se logClassified não estiver disponível
-      switch(level) {
-        case 'error':
-          console.error(logMessage, formattedData);
-          break;
-        case 'warn':
-          console.warn(logMessage, formattedData);
-          break;
-        case 'debug':
-          console.debug(logMessage, formattedData);
-          break;
-        default:
-          console.log(logMessage, formattedData);
-      }
-    }
-    
-    // Se disponível, enviar para sistema de logging
-    try {
-      if (typeof window.logDebug === 'function') {
-        window.logDebug(level.toUpperCase(), `[MODAL V3] ${category} - ${action}`, formattedData);
-      }
-    } catch (e) {
-      // Falha silenciosa
-    }
+    // Usar novo_log() diretamente - ordem de carregamento garante disponibilidade
+    const logLevel = level === 'error' ? 'ERROR' : level === 'warn' ? 'WARN' : level === 'debug' ? 'DEBUG' : 'INFO';
+    window.novo_log(logLevel, category, action, formattedData, 'OPERATION', 'MEDIUM');
   }
   
   // Configuração opcional de logging por categoria (padrão: todas habilitadas)
@@ -393,8 +370,8 @@ $(function() {
     // Tentar salvar em localStorage, com fallback para sessionStorage ou memória (FASE 11 - Correção MÉDIA)
     try {
       localStorage.setItem('whatsapp_modal_lead_state', JSON.stringify(state));
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'MODAL', 'Estado do lead salvo em localStorage', { 
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'MODAL', 'Estado do lead salvo em localStorage', { 
           lead_id: state.lead_id, 
           opportunity_id: state.opportunity_id,
           ddd: state.ddd 
@@ -404,8 +381,8 @@ $(function() {
       // Fallback 1: Tentar sessionStorage
       try {
         sessionStorage.setItem('whatsapp_modal_lead_state', JSON.stringify(state));
-        if (window.logClassified) {
-          window.logClassified('WARN', 'MODAL', 'localStorage indisponível, usando sessionStorage', null, 'ERROR_HANDLING', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('WARN', 'MODAL', 'localStorage indisponível, usando sessionStorage', null, 'ERROR_HANDLING', 'SIMPLE');
         }
       } catch (e2) {
         // Fallback 2: Armazenar em memória (variável global)
@@ -413,8 +390,8 @@ $(function() {
           window._whatsappModalLeadState = {};
         }
         window._whatsappModalLeadState = state;
-        if (window.logClassified) {
-          window.logClassified('WARN', 'MODAL', 'localStorage e sessionStorage indisponíveis, usando memória', null, 'ERROR_HANDLING', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('WARN', 'MODAL', 'localStorage e sessionStorage indisponíveis, usando memória', null, 'ERROR_HANDLING', 'SIMPLE');
         }
       }
     }
@@ -519,8 +496,8 @@ $(function() {
         
         // Retry apenas para erros 5xx (servidor) ou timeout
         if (attempt < maxRetries && (response.status >= 500 || response.status === 408)) {
-          if (window.logClassified) {
-            window.logClassified('WARN', 'MODAL', `Tentativa ${attempt + 1}/${maxRetries + 1} falhou, tentando novamente...`, null, 'ERROR_HANDLING', 'SIMPLE');
+          if (window.novo_log) {
+            window.novo_log('WARN', 'MODAL', `Tentativa ${attempt + 1}/${maxRetries + 1} falhou, tentando novamente...`, null, 'ERROR_HANDLING', 'SIMPLE');
           }
           await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
           continue;
@@ -531,8 +508,8 @@ $(function() {
       } catch (error) {
         // Erro de rede ou timeout - tentar retry
         if (attempt < maxRetries && (error.name === 'TypeError' || error.name === 'AbortError')) {
-          if (window.logClassified) {
-            window.logClassified('WARN', 'MODAL', `Erro de rede na tentativa ${attempt + 1}/${maxRetries + 1}, retry...`, null, 'ERROR_HANDLING', 'SIMPLE');
+          if (window.novo_log) {
+            window.novo_log('WARN', 'MODAL', `Erro de rede na tentativa ${attempt + 1}/${maxRetries + 1}, retry...`, null, 'ERROR_HANDLING', 'SIMPLE');
           }
           await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
           continue;
@@ -574,8 +551,8 @@ $(function() {
   function openWhatsApp(dados) {
     const mensagem = buildWhatsAppMessage(dados);
     const url = `${WHATSAPP_API_BASE}/send?phone=${MODAL_CONFIG.whatsapp.phone}&text=${mensagem}`; // FASE 4 - Correção MÉDIA: usar constante configurável
-    if (window.logClassified) {
-      window.logClassified('INFO', 'MODAL', 'Abrindo WhatsApp', { url: url }, 'UI', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('INFO', 'MODAL', 'Abrindo WhatsApp', { url: url }, 'UI', 'SIMPLE');
     }
     window.open(url, '_blank');
   }
@@ -592,8 +569,8 @@ $(function() {
     }
     
     // ✅ LOG PARA DEBUG - verificar se email está sendo gerado
-    if (window.logClassified) {
-      window.logClassified('TRACE', 'EMAIL_DEBUG', 'Email generation', {
+    if (window.novo_log) {
+      window.novo_log('TRACE', 'EMAIL_DEBUG', 'Email generation', {
         ddd: ddd,
         celular: celular,
         emailField: emailField,
@@ -603,8 +580,8 @@ $(function() {
     }
     
     // ✅ LOG ADICIONAL - verificar se função está sendo chamada
-    if (window.logClassified) {
-      window.logClassified('TRACE', 'EMAIL_DEBUG', 'coletarTodosDados() executada - dados coletados', {
+    if (window.novo_log) {
+      window.novo_log('TRACE', 'EMAIL_DEBUG', 'coletarTodosDados() executada - dados coletados', {
       TELEFONE: ddd + celular,
       DDD: ddd,
       CELULAR: celular,
@@ -615,8 +592,8 @@ $(function() {
     }
     
     // ✅ LOG CRÍTICO - verificar se email está sendo enviado
-    if (window.logClassified) {
-      window.logClassified('TRACE', 'EMAIL_DEBUG', 'Email sendo enviado para EspoCRM', { email: email }, 'DATA_FLOW', 'MEDIUM');
+    if (window.novo_log) {
+      window.novo_log('TRACE', 'EMAIL_DEBUG', 'Email sendo enviado para EspoCRM', { email: email }, 'DATA_FLOW', 'MEDIUM');
     }
     
     return {
@@ -705,8 +682,8 @@ $(function() {
         };
       }
     } catch (error) {
-      if (window.logClassified) {
-        window.logClassified('ERROR', 'EMAIL', 'Erro ao identificar momento', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('ERROR', 'EMAIL', 'Erro ao identificar momento', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
       }
       // Default: assumir UPDATE com erro (mais seguro)
       return {
@@ -760,8 +737,8 @@ $(function() {
       
       // Validar dados mínimos
       if (!ddd || !celular) {
-        if (window.logClassified) {
-          window.logClassified('WARN', 'EMAIL', 'Dados insuficientes para enviar email - DDD ou celular ausente', null, 'ERROR_HANDLING', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('WARN', 'EMAIL', 'Dados insuficientes para enviar email - DDD ou celular ausente', null, 'ERROR_HANDLING', 'SIMPLE');
         }
         return {
           success: false,
@@ -793,16 +770,16 @@ $(function() {
       
       // Determinar URL do endpoint usando window.APP_BASE_URL
       if (!window.APP_BASE_URL) {
-        if (window.logClassified) {
-          window.logClassified('ERROR', 'EMAIL', 'APP_BASE_URL não disponível', null, 'ERROR_HANDLING', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('ERROR', 'EMAIL', 'APP_BASE_URL não disponível', null, 'ERROR_HANDLING', 'SIMPLE');
         }
         throw new Error('APP_BASE_URL não disponível para envio de email');
       }
       const emailEndpoint = window.APP_BASE_URL + '/send_email_notification_endpoint.php';
       
       // Log antes do envio
-      if (window.logClassified) {
-        window.logClassified('INFO', 'EMAIL', `Enviando notificação ${modalMoment.description}`, { emoji: modalMoment.emoji, color: modalMoment.color_name }, 'OPERATION', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('INFO', 'EMAIL', `Enviando notificação ${modalMoment.description}`, { emoji: modalMoment.emoji, color: modalMoment.color_name }, 'OPERATION', 'SIMPLE');
       }
       
       // Fazer chamada para endpoint de email
@@ -824,9 +801,9 @@ $(function() {
         try {
           result = responseText ? JSON.parse(responseText) : { success: false, error: 'Resposta vazia' };
         } catch (parseError) {
-          if (window.logClassified) {
-            window.logClassified('ERROR', 'EMAIL', 'Erro ao parsear resposta JSON', parseError, 'ERROR_HANDLING', 'MEDIUM');
-            window.logClassified('DEBUG', 'EMAIL', 'Resposta recebida', { response: responseText.substring(0, 500) }, 'ERROR_HANDLING', 'MEDIUM');
+          if (window.novo_log) {
+            window.novo_log('ERROR', 'EMAIL', 'Erro ao parsear resposta JSON', parseError, 'ERROR_HANDLING', 'MEDIUM');
+            window.novo_log('DEBUG', 'EMAIL', 'Resposta recebida', { response: responseText.substring(0, 500) }, 'ERROR_HANDLING', 'MEDIUM');
           }
           return {
             success: false,
@@ -834,8 +811,8 @@ $(function() {
           };
         }
       } else {
-        if (window.logClassified) {
-          window.logClassified('ERROR', 'EMAIL', 'Resposta não é JSON', { status: response.status, contentType: contentType, text: responseText.substring(0, 200) }, 'ERROR_HANDLING', 'MEDIUM');
+        if (window.novo_log) {
+          window.novo_log('ERROR', 'EMAIL', 'Resposta não é JSON', { status: response.status, contentType: contentType, text: responseText.substring(0, 200) }, 'ERROR_HANDLING', 'MEDIUM');
         }
         return {
           success: false,
@@ -847,20 +824,20 @@ $(function() {
       if (result.success) {
         // Se o email foi enviado com sucesso, mas o conteúdo é sobre erro, deixar claro
         const statusTipo = isError ? 'ERRO' : 'SUCESSO';
-        if (window.logClassified) {
-          window.logClassified('INFO', 'EMAIL', `Notificação de ${statusTipo} enviada com SUCESSO: ${modalMoment.description}`, null, 'OPERATION', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('INFO', 'EMAIL', `Notificação de ${statusTipo} enviada com SUCESSO: ${modalMoment.description}`, null, 'OPERATION', 'SIMPLE');
         }
       } else {
-        if (window.logClassified) {
-          window.logClassified('ERROR', 'EMAIL', `Falha ao enviar notificação ${modalMoment.description}`, { error: result.error || 'Erro desconhecido' }, 'ERROR_HANDLING', 'MEDIUM');
+        if (window.novo_log) {
+          window.novo_log('ERROR', 'EMAIL', `Falha ao enviar notificação ${modalMoment.description}`, { error: result.error || 'Erro desconhecido' }, 'ERROR_HANDLING', 'MEDIUM');
         }
       }
       
       return result;
       
     } catch (error) {
-      if (window.logClassified) {
-        window.logClassified('ERROR', 'EMAIL', 'Erro ao enviar notificação', error, 'ERROR_HANDLING', 'VERBOSE');
+      if (window.novo_log) {
+        window.novo_log('ERROR', 'EMAIL', 'Erro ao enviar notificação', error, 'ERROR_HANDLING', 'VERBOSE');
       }
       return {
         success: false,
@@ -919,14 +896,14 @@ $(function() {
     
     // ✅ GARANTIR que 'data' seja um objeto, não string
     if (typeof webhook_data.data === 'string') {
-      if (window.logClassified) {
-        window.logClassified('WARN', 'MODAL', 'webhook_data.data é STRING! Corrigindo...', null, 'DATA_FLOW', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('WARN', 'MODAL', 'webhook_data.data é STRING! Corrigindo...', null, 'DATA_FLOW', 'SIMPLE');
       }
       try {
         webhook_data.data = JSON.parse(webhook_data.data);
       } catch (e) {
-        if (window.logClassified) {
-          window.logClassified('ERROR', 'MODAL', 'Erro ao parsear data', e, 'ERROR_HANDLING', 'MEDIUM');
+        if (window.novo_log) {
+          window.novo_log('ERROR', 'MODAL', 'Erro ao parsear data', e, 'ERROR_HANDLING', 'MEDIUM');
         }
       }
     }
@@ -966,23 +943,23 @@ $(function() {
     
     // ✅ DEBUG: Serializar JSON e verificar formato ANTES do envio
     const jsonBody = JSON.stringify(webhook_data);
-    if (window.logClassified) {
-      window.logClassified('TRACE', 'JSON_DEBUG', 'Objeto webhook_data original', webhook_data, 'DATA_FLOW', 'VERBOSE');
-      window.logClassified('TRACE', 'JSON_DEBUG', 'JSON serializado (JSON.stringify)', { jsonBody: jsonBody }, 'DATA_FLOW', 'VERBOSE');
-      window.logClassified('TRACE', 'JSON_DEBUG', 'Tipo do campo data', { type: typeof webhook_data.data }, 'DATA_FLOW', 'SIMPLE');
-      window.logClassified('TRACE', 'JSON_DEBUG', 'Data é objeto?', { isObject: webhook_data.data instanceof Object && !Array.isArray(webhook_data.data) }, 'DATA_FLOW', 'SIMPLE');
-      window.logClassified('TRACE', 'JSON_DEBUG', 'Tamanho do JSON', { size: jsonBody.length, unit: 'caracteres' }, 'DATA_FLOW', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('TRACE', 'JSON_DEBUG', 'Objeto webhook_data original', webhook_data, 'DATA_FLOW', 'VERBOSE');
+      window.novo_log('TRACE', 'JSON_DEBUG', 'JSON serializado (JSON.stringify)', { jsonBody: jsonBody }, 'DATA_FLOW', 'VERBOSE');
+      window.novo_log('TRACE', 'JSON_DEBUG', 'Tipo do campo data', { type: typeof webhook_data.data }, 'DATA_FLOW', 'SIMPLE');
+      window.novo_log('TRACE', 'JSON_DEBUG', 'Data é objeto?', { isObject: webhook_data.data instanceof Object && !Array.isArray(webhook_data.data) }, 'DATA_FLOW', 'SIMPLE');
+      window.novo_log('TRACE', 'JSON_DEBUG', 'Tamanho do JSON', { size: jsonBody.length, unit: 'caracteres' }, 'DATA_FLOW', 'SIMPLE');
     }
     
     // ✅ DEBUG: Validar JSON manualmente
     try {
       const testParse = JSON.parse(jsonBody);
-      if (window.logClassified) {
-        window.logClassified('TRACE', 'JSON_DEBUG', 'JSON válido - pode fazer parse', { dataPresent: testParse.data ? 'Data presente' : 'Data ausente' }, 'DATA_FLOW', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('TRACE', 'JSON_DEBUG', 'JSON válido - pode fazer parse', { dataPresent: testParse.data ? 'Data presente' : 'Data ausente' }, 'DATA_FLOW', 'SIMPLE');
       }
     } catch (e) {
-      if (window.logClassified) {
-        window.logClassified('ERROR', 'JSON_DEBUG', 'JSON INVÁLIDO', { message: e.message }, 'ERROR_HANDLING', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('ERROR', 'JSON_DEBUG', 'JSON INVÁLIDO', { message: e.message }, 'ERROR_HANDLING', 'SIMPLE');
       }
     }
     
@@ -1051,15 +1028,15 @@ $(function() {
             // Enviar email de forma assíncrona (não bloquear o retorno)
             sendAdminEmailNotification(webhook_data, responseData)
               .catch(error => {
-                if (window.logClassified) {
-                  window.logClassified('WARN', 'EMAIL', 'Erro ao enviar email (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
+                if (window.novo_log) {
+                  window.novo_log('WARN', 'EMAIL', 'Erro ao enviar email (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
                 }
               });
             
             return { success: true, id: leadId, opportunity_id: opportunityId, attempt: result.attempt + 1 };
           } else {
-            if (window.logClassified) {
-              window.logClassified('WARN', 'MODAL', 'Erro ao criar lead no EspoCRM', { error: responseData }, 'ERROR_HANDLING', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('WARN', 'MODAL', 'Erro ao criar lead no EspoCRM', { error: responseData }, 'ERROR_HANDLING', 'SIMPLE');
             }
             logEvent('whatsapp_modal_espocrm_initial_failed', { error: responseData }, 'warning');
             
@@ -1072,8 +1049,8 @@ $(function() {
               responseData: responseData
             })
               .catch(error => {
-                if (window.logClassified) {
-                window.logClassified('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
+                if (window.novo_log) {
+                window.novo_log('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
               }
               });
             
@@ -1094,8 +1071,8 @@ $(function() {
             responseData: null
           })
             .catch(error => {
-              if (window.logClassified) {
-                window.logClassified('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
+              if (window.novo_log) {
+                window.novo_log('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
               }
             });
           
@@ -1116,8 +1093,8 @@ $(function() {
           responseData: null
         })
           .catch(error => {
-            if (window.logClassified) {
-              window.logClassified('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
             }
           });
         
@@ -1263,8 +1240,8 @@ $(function() {
           // Enviar email de forma assíncrona (não bloquear o retorno)
           sendAdminEmailNotification(webhook_data, responseData)
             .catch(error => {
-              if (window.logClassified) {
-                window.logClassified('ERROR', 'EMAIL', 'Erro ao enviar email (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+              if (window.novo_log) {
+                window.novo_log('ERROR', 'EMAIL', 'Erro ao enviar email (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
               }
             });
           
@@ -1283,8 +1260,8 @@ $(function() {
             responseData: null
           })
             .catch(error => {
-              if (window.logClassified) {
-                window.logClassified('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
+              if (window.novo_log) {
+                window.novo_log('WARN', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', error, 'ERROR_HANDLING', 'MEDIUM');
               }
             });
           
@@ -1306,8 +1283,8 @@ $(function() {
           responseData: null
         })
           .catch(error => {
-            if (window.logClassified) {
-              window.logClassified('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
             }
           });
         
@@ -1328,8 +1305,8 @@ $(function() {
         responseData: null
       })
         .catch(emailError => {
-          if (window.logClassified) {
-            window.logClassified('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: emailError.message }, 'ERROR_HANDLING', 'SIMPLE');
+          if (window.novo_log) {
+            window.novo_log('ERROR', 'EMAIL', 'Erro ao enviar email de notificação (não bloqueante)', { error: emailError.message }, 'ERROR_HANDLING', 'SIMPLE');
           }
         });
       
@@ -1508,8 +1485,8 @@ $(function() {
         return { success: false, error: errorMsg, attempt: result.attempt + 1 };
       }
     } catch (error) {
-      if (window.logClassified) {
-        window.logClassified('ERROR', 'MODAL', 'Erro ao enviar mensagem via Octadesk', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('ERROR', 'MODAL', 'Erro ao enviar mensagem via Octadesk', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
       }
       logEvent('whatsapp_modal_octadesk_exception', { error: error.message }, 'error');
       return { success: false, error: error.message };
@@ -1614,8 +1591,8 @@ $(function() {
    */
   function registrarConversaoGoogleAds(dados) {
     if (typeof window.dataLayer === 'undefined') {
-      if (window.logClassified) {
-        window.logClassified('WARN', 'MODAL', 'dataLayer não disponível para registro de conversão', null, 'ERROR_HANDLING', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('WARN', 'MODAL', 'dataLayer não disponível para registro de conversão', null, 'ERROR_HANDLING', 'SIMPLE');
       }
       logEvent('whatsapp_modal_googleads_datalayer_unavailable', {}, 'warning');
       return;
@@ -1638,8 +1615,8 @@ $(function() {
       has_placa: !!dados.PLACA 
     }, 'info');
     
-    if (window.logClassified) {
-      window.logClassified('INFO', 'MODAL', 'Conversão registrada no Google Ads', null, 'OPERATION', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('INFO', 'MODAL', 'Conversão registrada no Google Ads', null, 'OPERATION', 'SIMPLE');
     }
   }
   
@@ -1963,8 +1940,8 @@ $(function() {
     
     // Verificar se DDD tem 2 dígitos e celular tem 9 dígitos
     if (dddDigits === 2 && celularDigits === 9 && $divEtapa2.is(':hidden')) {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'MODAL', 'DDD + Celular preenchidos, expandindo DIV 2', null, 'UI', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'MODAL', 'DDD + Celular preenchidos, expandindo DIV 2', null, 'UI', 'SIMPLE');
       }
       $divEtapa2.slideDown(400, function() {
         // Focar no CPF após animação de abertura
@@ -2053,8 +2030,8 @@ $(function() {
               modal_session_id: generateSessionId()
             }, 'debug');
             
-            if (window.logClassified) {
-              window.logClassified('INFO', 'MODAL', 'Processando registro inicial (paralelo): EspoCRM + Octadesk + GTM...', null, 'OPERATION', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('INFO', 'MODAL', 'Processando registro inicial (paralelo): EspoCRM + Octadesk + GTM...', null, 'OPERATION', 'SIMPLE');
             }
             
             // PROCESSAR EM PARALELO: EspoCRM + Octadesk + GTM
@@ -2091,8 +2068,8 @@ $(function() {
               
               // Logs individuais detalhados
               if (espocrmResult.success) {
-                if (window.logClassified) {
-                  window.logClassified('INFO', 'MODAL', 'Lead criado no EspoCRM', { lead_id: espocrmResult.id || 'sem ID' }, 'OPERATION', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('INFO', 'MODAL', 'Lead criado no EspoCRM', { lead_id: espocrmResult.id || 'sem ID' }, 'OPERATION', 'SIMPLE');
                 }
                 // ✅ V4: Preservar opportunity_id ao salvar estado (não sobrescrever)
                 // O estado já foi salvo em registrarPrimeiroContatoEspoCRM com opportunity_id,
@@ -2110,28 +2087,28 @@ $(function() {
                   });
                 }
               } else {
-                if (window.logClassified) {
-                  window.logClassified('WARN', 'MODAL', 'Erro ao criar lead (não bloqueante)', { error: espocrmResult.error }, 'ERROR_HANDLING', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('WARN', 'MODAL', 'Erro ao criar lead (não bloqueante)', { error: espocrmResult.error }, 'ERROR_HANDLING', 'SIMPLE');
                 }
               }
               
               if (octadeskResult.success) {
-                if (window.logClassified) {
-                  window.logClassified('INFO', 'MODAL', 'Mensagem inicial enviada via Octadesk', null, 'OPERATION', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('INFO', 'MODAL', 'Mensagem inicial enviada via Octadesk', null, 'OPERATION', 'SIMPLE');
                 }
               } else {
-                if (window.logClassified) {
-                  window.logClassified('WARN', 'MODAL', 'Erro ao enviar mensagem (não bloqueante)', { error: octadeskResult.error }, 'ERROR_HANDLING', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('WARN', 'MODAL', 'Erro ao enviar mensagem (não bloqueante)', { error: octadeskResult.error }, 'ERROR_HANDLING', 'SIMPLE');
                 }
               }
               
               if (gtmResult.success) {
-                if (window.logClassified) {
-                  window.logClassified('INFO', 'MODAL', 'Conversão inicial registrada no GTM', null, 'OPERATION', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('INFO', 'MODAL', 'Conversão inicial registrada no GTM', null, 'OPERATION', 'SIMPLE');
                 }
               } else {
-                if (window.logClassified) {
-                  window.logClassified('WARN', 'MODAL', 'Erro ao registrar conversão (não bloqueante)', { error: gtmResult.error }, 'ERROR_HANDLING', 'SIMPLE');
+                if (window.novo_log) {
+                  window.novo_log('WARN', 'MODAL', 'Erro ao registrar conversão (não bloqueante)', { error: gtmResult.error }, 'ERROR_HANDLING', 'SIMPLE');
                 }
               }
             })
@@ -2143,8 +2120,8 @@ $(function() {
                 error_name: error.name
               }, 'error');
               
-              if (window.logClassified) {
-                window.logClassified('WARN', 'MODAL', 'Erros no processamento inicial (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+              if (window.novo_log) {
+                window.novo_log('WARN', 'MODAL', 'Erros no processamento inicial (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
               }
             });
           }
@@ -2180,8 +2157,8 @@ $(function() {
           modal_session_id: generateSessionId()
         }, 'debug');
         
-        if (window.logClassified) {
-          window.logClassified('INFO', 'MODAL', 'Processando registro inicial (paralelo): EspoCRM + Octadesk + GTM (sem API)...', null, 'OPERATION', 'SIMPLE');
+        if (window.novo_log) {
+          window.novo_log('INFO', 'MODAL', 'Processando registro inicial (paralelo): EspoCRM + Octadesk + GTM (sem API)...', null, 'OPERATION', 'SIMPLE');
         }
         
         // PROCESSAR EM PARALELO: EspoCRM + Octadesk + GTM
@@ -2217,8 +2194,8 @@ $(function() {
           }, 'info');
           
           if (espocrmResult.success) {
-            if (window.logClassified) {
-              window.logClassified('INFO', 'MODAL', 'Lead criado no EspoCRM', { lead_id: espocrmResult.id || 'sem ID' }, 'OPERATION', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('INFO', 'MODAL', 'Lead criado no EspoCRM', { lead_id: espocrmResult.id || 'sem ID' }, 'OPERATION', 'SIMPLE');
             }
             // ✅ V4: Preservar opportunity_id ao salvar estado (não sobrescrever)
             if (espocrmResult.id) {
@@ -2235,13 +2212,13 @@ $(function() {
             }
           }
           if (octadeskResult.success) {
-            if (window.logClassified) {
-              window.logClassified('INFO', 'MODAL', 'Mensagem inicial enviada via Octadesk', null, 'OPERATION', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('INFO', 'MODAL', 'Mensagem inicial enviada via Octadesk', null, 'OPERATION', 'SIMPLE');
             }
           }
           if (gtmResult.success) {
-            if (window.logClassified) {
-              window.logClassified('INFO', 'MODAL', 'Conversão inicial registrada no GTM', null, 'OPERATION', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('INFO', 'MODAL', 'Conversão inicial registrada no GTM', null, 'OPERATION', 'SIMPLE');
             }
           }
         })
@@ -2253,8 +2230,8 @@ $(function() {
             error_name: error.name
           }, 'error');
           
-          if (window.logClassified) {
-            window.logClassified('WARN', 'MODAL', 'Erros no processamento inicial (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
+          if (window.novo_log) {
+            window.novo_log('WARN', 'MODAL', 'Erros no processamento inicial (não bloqueante)', { error: error.message }, 'ERROR_HANDLING', 'SIMPLE');
           }
         });
       }
@@ -2417,19 +2394,19 @@ $(function() {
   $(document).on('click', MODAL_CONFIG.selectors.trigger, function(e) {
     e.preventDefault();
     e.stopPropagation();
-    if (window.logClassified) {
-      window.logClassified('DEBUG', 'MODAL', 'Abrindo modal WhatsApp', null, 'UI', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('DEBUG', 'MODAL', 'Abrindo modal WhatsApp', null, 'UI', 'SIMPLE');
     }
     $modal.fadeIn(300);
     
     // Debug após abrir modal
     setTimeout(function() {
       const $content = $('.whatsapp-modal-content');
-      if (window.logClassified) {
-        window.logClassified('TRACE', 'MODAL', 'Elementos encontrados ao abrir', { count: $content.length }, 'UI', 'MEDIUM');
+      if (window.novo_log) {
+        window.novo_log('TRACE', 'MODAL', 'Elementos encontrados ao abrir', { count: $content.length }, 'UI', 'MEDIUM');
         if ($content.length) {
           const computed = window.getComputedStyle($content[0]);
-          window.logClassified('TRACE', 'MODAL', 'Estilos do modal', {
+          window.novo_log('TRACE', 'MODAL', 'Estilos do modal', {
             position: computed.position,
             right: computed.right,
             bottom: computed.bottom,
@@ -2441,23 +2418,23 @@ $(function() {
   });
   
   $closeBtn.on('click', function() {
-    if (window.logClassified) {
-      window.logClassified('DEBUG', 'MODAL', 'Fechando modal (X)', null, 'UI', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('DEBUG', 'MODAL', 'Fechando modal (X)', null, 'UI', 'SIMPLE');
     }
     $modal.fadeOut(300);
   });
   
   $overlay.on('click', function() {
-    if (window.logClassified) {
-      window.logClassified('DEBUG', 'MODAL', 'Fechando modal (overlay)', null, 'UI', 'SIMPLE');
+    if (window.novo_log) {
+      window.novo_log('DEBUG', 'MODAL', 'Fechando modal (overlay)', null, 'UI', 'SIMPLE');
     }
     $modal.fadeOut(300);
   });
   
   $(document).on('keydown', function(e) {
     if (e.key === 'Escape' && $modal.is(':visible')) {
-      if (window.logClassified) {
-        window.logClassified('DEBUG', 'MODAL', 'Fechando modal (ESC)', null, 'UI', 'SIMPLE');
+      if (window.novo_log) {
+        window.novo_log('DEBUG', 'MODAL', 'Fechando modal (ESC)', null, 'UI', 'SIMPLE');
       }
       $modal.fadeOut(300);
     }
@@ -2564,13 +2541,13 @@ $(function() {
           }, result.success ? 'info' : 'warn');
           
           if (result.success) {
-            if (window.logClassified) {
-              window.logClassified('INFO', 'MODAL', 'Lead atualizado com sucesso', null, 'OPERATION', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('INFO', 'MODAL', 'Lead atualizado com sucesso', null, 'OPERATION', 'SIMPLE');
             }
             logEvent('whatsapp_modal_espocrm_update_final_success', {}, 'info');
           } else {
-            if (window.logClassified) {
-              window.logClassified('WARN', 'MODAL', 'Erro ao atualizar lead (não bloqueante)', { error: result.error }, 'ERROR_HANDLING', 'SIMPLE');
+            if (window.novo_log) {
+              window.novo_log('WARN', 'MODAL', 'Erro ao atualizar lead (não bloqueante)', { error: result.error }, 'ERROR_HANDLING', 'SIMPLE');
             }
             logEvent('whatsapp_modal_espocrm_update_final_failed', { error: result.error }, 'warning');
           }
@@ -2606,8 +2583,8 @@ $(function() {
     });
   });
   
-  if (window.logClassified) {
-    window.logClassified('INFO', 'MODAL', 'Sistema de modal WhatsApp Definitivo inicializado', {
+  if (window.novo_log) {
+    window.novo_log('INFO', 'MODAL', 'Sistema de modal WhatsApp Definitivo inicializado', {
       ambiente: isDevelopmentEnvironment() ? 'DESENVOLVIMENTO' : 'PRODUÇÃO',
       versao: 'V3.0 - Fluxo Otimizado + Debug Logs Detalhados'
     }, 'INIT', 'SIMPLE');

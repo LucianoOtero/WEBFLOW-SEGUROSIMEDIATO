@@ -50,10 +50,10 @@ header('X-Environment: production');
 header('X-API-Version: 2.0');
 header('X-Webhook: octadesk-v2');
 
-// ⚠️ CREDENCIAIS DE PRODUÇÃO OCTADESK (obtidas do add_webflow_octa.php de produção)
-$OCTADESK_API_KEY = 'b4e081fa-94ab-4456-8378-991bf995d3ea.d3e8e579-869d-4973-b34d-82391d08702b';
-$API_BASE = 'https://o205242-d60.api004.octadesk.services';
-$OCTADESK_FROM = '+551132301422';
+// ⚠️ CREDENCIAIS OCTADESK (usando variáveis de ambiente)
+$OCTADESK_API_KEY = getOctaDeskApiKey();
+$API_BASE = getOctaDeskApiBase();
+$OCTADESK_FROM = getOctaDeskFrom();
 // Usar função de config.php (prioriza $_ENV do PHP-FPM)
 $WEBFLOW_SECRET_OCTADESK = getWebflowSecretOctaDesk();
 
