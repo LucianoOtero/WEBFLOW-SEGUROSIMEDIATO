@@ -23,8 +23,8 @@ env[AWS_REGION] = us-east-1
 
 ### **Valores Novos (Reais - Funcionam em DEV):**
 ```ini
-env[AWS_ACCESS_KEY_ID] = AKIA3JCQSJTSMSKFZPW3
-env[AWS_SECRET_ACCESS_KEY] = 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
+env[AWS_ACCESS_KEY_ID] = [AWS_ACCESS_KEY_ID_DEV]
+env[AWS_SECRET_ACCESS_KEY] = [AWS_SECRET_ACCESS_KEY_DEV]
 env[AWS_REGION] = sa-east-1
 ```
 
@@ -52,8 +52,8 @@ ssh root@157.180.36.223 "cp /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/po
 **Arquivo:** `WEBFLOW-SEGUROSIMEDIATO/06-SERVER-CONFIG/php-fpm_www_conf_PROD.conf`
 
 **Mudanças:**
-- Linha ~569: `AWS_ACCESS_KEY_ID` atualizado para `AKIA3JCQSJTSMSKFZPW3`
-- Linha ~570: `AWS_SECRET_ACCESS_KEY` atualizado para `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`
+- Linha ~569: `AWS_ACCESS_KEY_ID` atualizado para `[AWS_ACCESS_KEY_ID_DEV]`
+- Linha ~570: `AWS_SECRET_ACCESS_KEY` atualizado para `[AWS_SECRET_ACCESS_KEY_DEV]`
 - Linha ~571: `AWS_REGION` atualizado para `sa-east-1`
 
 **Status:** ✅ **CONCLUÍDA**

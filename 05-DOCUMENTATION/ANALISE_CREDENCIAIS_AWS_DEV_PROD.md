@@ -33,8 +33,8 @@ env[AWS_REGION] = us-east-1
 
 #### **DEV (servidor):**
 ```php
-define('AWS_ACCESS_KEY_ID', 'AKIA3JCQSJTSMSKFZPW3');
-define('AWS_SECRET_ACCESS_KEY', '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');
+define('AWS_ACCESS_KEY_ID', '[AWS_ACCESS_KEY_ID_DEV]');
+define('AWS_SECRET_ACCESS_KEY', '[AWS_SECRET_ACCESS_KEY_DEV]');
 define('AWS_REGION', 'sa-east-1');
 ```
 **Status:** ✅ **Credenciais REAIS** (funcionam - teste em DEV foi bem-sucedido)
@@ -107,8 +107,8 @@ define('AWS_REGION', $_ENV['AWS_REGION'] ?? 'sa-east-1');
 
 **Credenciais Reais (de DEV):**
 ```ini
-env[AWS_ACCESS_KEY_ID] = AKIA3JCQSJTSMSKFZPW3
-env[AWS_SECRET_ACCESS_KEY] = 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
+env[AWS_ACCESS_KEY_ID] = [AWS_ACCESS_KEY_ID_DEV]
+env[AWS_SECRET_ACCESS_KEY] = [AWS_SECRET_ACCESS_KEY_DEV]
 env[AWS_REGION] = sa-east-1
 ```
 
@@ -141,8 +141,8 @@ env[AWS_REGION] = sa-east-1
 ### **Solução Recomendada:**
 
 **Atualizar PHP-FPM PROD com credenciais reais que estão funcionando em DEV:**
-- `AWS_ACCESS_KEY_ID = AKIA3JCQSJTSMSKFZPW3`
-- `AWS_SECRET_ACCESS_KEY = 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`
+- `AWS_ACCESS_KEY_ID = [AWS_ACCESS_KEY_ID_DEV]`
+- `AWS_SECRET_ACCESS_KEY = [AWS_SECRET_ACCESS_KEY_DEV]`
 - `AWS_REGION = sa-east-1`
 
 ---

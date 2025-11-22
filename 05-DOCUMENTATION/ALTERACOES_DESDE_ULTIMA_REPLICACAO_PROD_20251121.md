@@ -192,8 +192,8 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 - **Data:** 21/11/2025
 - **Arquivo:** `/etc/php/8.3/fpm/pool.d/www.conf`
 - **Alterações:**
-  - `env[AWS_ACCESS_KEY_ID]`: `AKIAIOSFODNN7EXAMPLE` → `AKIA3JCQSJTSLPFUVP26`
-  - `env[AWS_SECRET_ACCESS_KEY]`: `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` → `BD7yp5e9+noGG7F/n3IYOdrToVX/GPmmX8GKvQ5r`
+  - `env[AWS_ACCESS_KEY_ID]`: `AKIAIOSFODNN7EXAMPLE` → `[AWS_ACCESS_KEY_ID_DEV]`
+  - `env[AWS_SECRET_ACCESS_KEY]`: `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` → `[AWS_SECRET_ACCESS_KEY_DEV]`
   - `env[AWS_REGION]`: `us-east-1` → `sa-east-1`
   - `env[AWS_SES_FROM_EMAIL]`: `noreply@bssegurosimediato.com.br` → `noreply@bpsegurosimediato.com.br` (revertido)
 - **Status:** ✅ Configurado em DEV
@@ -334,8 +334,8 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 ### **Configurações PHP-FPM para Replicar:**
 
 #### **Variáveis AWS SES (Modificar):**
-- [ ] `env[AWS_ACCESS_KEY_ID]` = `AKIA3JCQSJTSLPFUVP26`
-- [ ] `env[AWS_SECRET_ACCESS_KEY]` = `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`
+- [ ] `env[AWS_ACCESS_KEY_ID]` = `[AWS_ACCESS_KEY_ID_DEV]`
+- [ ] `env[AWS_SECRET_ACCESS_KEY]` = `[AWS_SECRET_ACCESS_KEY_DEV]`
 - [ ] `env[AWS_REGION]` = `sa-east-1`
 - [ ] `env[AWS_SES_FROM_EMAIL]` = `noreply@bpsegurosimediato.com.br`
 

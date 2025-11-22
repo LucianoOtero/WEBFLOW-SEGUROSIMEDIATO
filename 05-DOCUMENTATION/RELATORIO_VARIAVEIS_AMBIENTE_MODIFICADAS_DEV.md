@@ -30,14 +30,14 @@ Identificar **TODAS** as variáveis de ambiente que foram modificadas ou adicion
 
 #### **1.1.1. `AWS_ACCESS_KEY_ID`**
 - **Valor Anterior (PROD):** `AKIAIOSFODNN7EXAMPLE` (exemplo/documentado)
-- **Valor Atual (DEV):** `AKIA3JCQSJTSLPFUVP26`
+- **Valor Atual (DEV):** `[AWS_ACCESS_KEY_ID_DEV]`
 - **Status:** ✅ **MODIFICADA**
 - **Data:** 21/11/2025
 - **Motivo:** Atualização de credenciais AWS SES (novo usuário IAM `ses-email-sender-new`)
 
 #### **1.1.2. `AWS_SECRET_ACCESS_KEY`**
 - **Valor Anterior (PROD):** `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` (exemplo/documentado)
-- **Valor Atual (DEV):** `BD7yp5e9+noGG7F/n3IYOdrToVX/GPmmX8GKvQ5r`
+- **Valor Atual (DEV):** `[AWS_SECRET_ACCESS_KEY_DEV]`
 - **Status:** ✅ **MODIFICADA**
 - **Data:** 21/11/2025
 - **Motivo:** Atualização de credenciais AWS SES (novo usuário IAM `ses-email-sender-new`)
@@ -145,9 +145,9 @@ Identificar **TODAS** as variáveis de ambiente que foram modificadas ou adicion
 3. `APP_BASE_DIR` = `/var/www/html/dev/root`
 4. `APP_BASE_URL` = `https://dev.bssegurosimediato.com.br`
 5. `APP_CORS_ORIGINS` = `https://segurosimediato-dev.webflow.io,https://segurosimediato-8119bf26e77bf4ff336a58e.webflow.io,https://dev.bssegurosimediato.com.br`
-6. `AWS_ACCESS_KEY_ID` = `AKIA3JCQSJTSLPFUVP26` 🔴 **MODIFICADA**
+6. `AWS_ACCESS_KEY_ID` = `[AWS_ACCESS_KEY_ID_DEV]` 🔴 **MODIFICADA**
 7. `AWS_REGION` = `sa-east-1` 🔴 **MODIFICADA**
-8. `AWS_SECRET_ACCESS_KEY` = `BD7yp5e9+noGG7F/n3IYOdrToVX/GPmmX8GKvQ5r` 🔴 **MODIFICADA**
+8. `AWS_SECRET_ACCESS_KEY` = `[AWS_SECRET_ACCESS_KEY_DEV]` 🔴 **MODIFICADA**
 9. `AWS_SES_ADMIN_EMAILS` = `lrotero@gmail.com,alex.kaminski@imediatoseguros.com.br,alexkaminski70@gmail.com`
 10. `AWS_SES_FROM_EMAIL` = `noreply@bpsegurosimediato.com.br` 🔴 **MODIFICADA**
 11. `AWS_SES_FROM_NAME` = `BP Seguros Imediato`
@@ -187,8 +187,8 @@ Identificar **TODAS** as variáveis de ambiente que foram modificadas ou adicion
 
 ### **Variáveis AWS SES (Modificar em PROD):**
 
-- [ ] `env[AWS_ACCESS_KEY_ID]` = `AKIA3JCQSJTSLPFUVP26`
-- [ ] `env[AWS_SECRET_ACCESS_KEY]` = `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`
+- [ ] `env[AWS_ACCESS_KEY_ID]` = `[AWS_ACCESS_KEY_ID_DEV]`
+- [ ] `env[AWS_SECRET_ACCESS_KEY]` = `[AWS_SECRET_ACCESS_KEY_DEV]`
 - [ ] `env[AWS_REGION]` = `sa-east-1`
 - [ ] `env[AWS_SES_FROM_EMAIL]` = `noreply@bpsegurosimediato.com.br`
 

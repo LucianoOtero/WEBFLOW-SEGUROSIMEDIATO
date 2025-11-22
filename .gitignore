@@ -1,0 +1,16 @@
+# Diretório de credenciais (nunca commitar)
+CREDENCIAIS/
+*.credentials
+*.secrets
+
+# Backups locais
+backups/
+*.backup*
+
+# Arquivos temporários
+TMP/
+*.tmp
+
+# Logs locais
+*.log
+

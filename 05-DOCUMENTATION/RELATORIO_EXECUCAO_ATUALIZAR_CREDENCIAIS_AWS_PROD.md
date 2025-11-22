@@ -38,8 +38,8 @@ ssh root@157.180.36.223 "cp /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/po
 **Arquivo:** `WEBFLOW-SEGUROSIMEDIATO/06-SERVER-CONFIG/php-fpm_www_conf_PROD.conf`
 
 **Mudanças Realizadas:**
-- ✅ Linha ~569: `AWS_ACCESS_KEY_ID` atualizado de `AKIAIOSFODNN7EXAMPLE` para `AKIA3JCQSJTSMSKFZPW3`
-- ✅ Linha ~570: `AWS_SECRET_ACCESS_KEY` atualizado de `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` para `tfgqmsB0bG4FfHjYjej0ZXdMDouhA5tJ0xk4Pn4z`
+- ✅ Linha ~569: `AWS_ACCESS_KEY_ID` atualizado de `AKIAIOSFODNN7EXAMPLE` para `[AWS_ACCESS_KEY_ID_DEV]`
+- ✅ Linha ~570: `AWS_SECRET_ACCESS_KEY` atualizado de `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` para `[AWS_SECRET_ACCESS_KEY_DEV]`
 - ✅ Linha ~571: `AWS_REGION` atualizado de `us-east-1` para `sa-east-1`
 
 **Status:** ✅ **CONCLUÍDA**
@@ -143,8 +143,8 @@ curl -X POST https://prod.bssegurosimediato.com.br/send_email_notification_endpo
 ## 📊 VERIFICAÇÕES FINAIS
 
 ### **1. Credenciais AWS**
-- ✅ **AWS_ACCESS_KEY_ID:** `AKIA3JCQSJTSMSKFZPW3` (real)
-- ✅ **AWS_SECRET_ACCESS_KEY:** `tfgqmsB0bG4FfHjYjej0ZXdMDouhA5tJ0xk4Pn4z` (real)
+- ✅ **AWS_ACCESS_KEY_ID:** `[AWS_ACCESS_KEY_ID_DEV]` (real)
+- ✅ **AWS_SECRET_ACCESS_KEY:** `[AWS_SECRET_ACCESS_KEY_DEV]` (real)
 - ✅ **AWS_REGION:** `sa-east-1` (correto para Brasil)
 
 ### **2. Integridade do Arquivo**
