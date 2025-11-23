@@ -20,7 +20,11 @@
  * @return string 'development' ou 'production'
  */
 function getEnvironment() {
-    return $_ENV['PHP_ENV'] ?? 'development';
+    if (empty($_ENV['PHP_ENV'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PHP_ENV não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PHP_ENV não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PHP_ENV'];
 }
 
 /**
@@ -45,7 +49,11 @@ function isProduction() {
  * @return string Caminho físico no servidor
  */
 function getBaseDir() {
-    $baseDir = $_ENV['APP_BASE_DIR'] ?? __DIR__;
+    $baseDir = $_ENV['APP_BASE_DIR'] ?? '';
+    if (empty($baseDir)) {
+        error_log('[CONFIG] ERRO CRÍTICO: APP_BASE_DIR não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_BASE_DIR não está definido nas variáveis de ambiente');
+    }
     // Garantir que não termina com barra
     return rtrim($baseDir, '/\\');
 }
@@ -58,12 +66,8 @@ function getBaseDir() {
 function getBaseUrl() {
     $baseUrl = $_ENV['APP_BASE_URL'] ?? '';
     if (empty($baseUrl)) {
-        // Fallback baseado no ambiente (apenas se não estiver definido)
-        if (isDevelopment()) {
-            $baseUrl = 'https://dev.bssegurosimediato.com.br';
-        } else {
-            $baseUrl = 'https://bssegurosimediato.com.br';
-        }
+        error_log('[CONFIG] ERRO CRÍTICO: APP_BASE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_BASE_URL não está definido nas variáveis de ambiente');
     }
     // Garantir que não termina com barra
     return rtrim($baseUrl, '/');
@@ -76,22 +80,8 @@ function getBaseUrl() {
 function getCorsOrigins() {
     $corsOrigins = $_ENV['APP_CORS_ORIGINS'] ?? '';
     if (empty($corsOrigins)) {
-        // Fallback padrão baseado no ambiente
-        if (isDevelopment()) {
-            return [
-                'https://segurosimediato-dev.webflow.io',
-                'https://segurosimediato-8119bf26e77bf4ff336a58e.webflow.io',
-                'https://dev.bssegurosimediato.com.br',
-                'http://localhost',
-                'http://localhost:8080'
-            ];
-        } else {
-            return [
-                'https://www.segurosimediato.com.br',
-                'https://segurosimediato.com.br',
-                'https://bpsegurosimediato.com.br'
-            ];
-        }
+        error_log('[CONFIG] ERRO CRÍTICO: APP_CORS_ORIGINS não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APP_CORS_ORIGINS não está definido nas variáveis de ambiente');
     }
     // Separar por vírgula e limpar espaços
     $origins = array_map('trim', explode(',', $corsOrigins));
@@ -142,13 +132,29 @@ function setCorsHeaders($origin = null) {
  * @return array Array com host, port, name, user, pass
  */
 function getDatabaseConfig() {
-    return [
-        'host' => $_ENV['LOG_DB_HOST'] ?? 'localhost',
-        'port' => (int)($_ENV['LOG_DB_PORT'] ?? 3306),
-        'name' => $_ENV['LOG_DB_NAME'] ?? (isDevelopment() ? 'rpa_logs_dev' : 'rpa_logs_prod'),
-        'user' => $_ENV['LOG_DB_USER'] ?? (isDevelopment() ? 'rpa_logger_dev' : 'rpa_logger_prod'),
+    $config = [
+        'host' => $_ENV['LOG_DB_HOST'] ?? '',
+        'port' => (int)($_ENV['LOG_DB_PORT'] ?? 0),
+        'name' => $_ENV['LOG_DB_NAME'] ?? '',
+        'user' => $_ENV['LOG_DB_USER'] ?? '',
         'pass' => $_ENV['LOG_DB_PASS'] ?? ''
     ];
+    
+    // Validar campos obrigatórios
+    $required = ['host', 'name', 'user', 'pass'];
+    foreach ($required as $field) {
+        if (empty($config[$field])) {
+            error_log("[CONFIG] ERRO CRÍTICO: LOG_DB_{$field} não está definido nas variáveis de ambiente");
+            throw new RuntimeException("LOG_DB_{$field} não está definido nas variáveis de ambiente");
+        }
+    }
+    
+    // Port padrão se não definido
+    if ($config['port'] === 0) {
+        $config['port'] = 3306;
+    }
+    
+    return $config;
 }
 
 // ==================== VARIÁVEIS DE APIs EXTERNAS ====================
@@ -158,9 +164,12 @@ function getDatabaseConfig() {
  * @return string URL do EspoCRM
  */
 function getEspoCrmUrl() {
-    return $_ENV['ESPOCRM_URL'] ?? (isDevelopment() 
-        ? 'https://dev.flyingdonkeys.com.br' 
-        : 'https://flyingdonkeys.com.br');
+    $url = $_ENV['ESPOCRM_URL'] ?? '';
+    if (empty($url)) {
+        error_log('[CONFIG] ERRO CRÍTICO: ESPOCRM_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('ESPOCRM_URL não está definido nas variáveis de ambiente');
+    }
+    return $url;
 }
 
 /**
@@ -168,9 +177,11 @@ function getEspoCrmUrl() {
  * @return string API Key
  */
 function getEspoCrmApiKey() {
-    return $_ENV['ESPOCRM_API_KEY'] ?? (isDevelopment()
-        ? '73b5b7983bfc641cdba72d204a48ed9d'
-        : '82d5f667f3a65a9a43341a0705be2b0c');
+    if (empty($_ENV['ESPOCRM_API_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: ESPOCRM_API_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('ESPOCRM_API_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['ESPOCRM_API_KEY'];
 }
 
 /**
@@ -178,9 +189,11 @@ function getEspoCrmApiKey() {
  * @return string Secret
  */
 function getWebflowSecretFlyingDonkeys() {
-    return $_ENV['WEBFLOW_SECRET_FLYINGDONKEYS'] ?? (isDevelopment()
-        ? '888931809d5215258729a8df0b503403bfd300f32ead1a983d95a6119b166142'
-        : 'ce051cb1d819faac5837f4e47a7fdd8cf2a8b248a2b3ecdb9ab358cfb9ed7990');
+    if (empty($_ENV['WEBFLOW_SECRET_FLYINGDONKEYS'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: WEBFLOW_SECRET_FLYINGDONKEYS não está definido nas variáveis de ambiente');
+        throw new RuntimeException('WEBFLOW_SECRET_FLYINGDONKEYS não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['WEBFLOW_SECRET_FLYINGDONKEYS'];
 }
 
 /**
@@ -188,9 +201,11 @@ function getWebflowSecretFlyingDonkeys() {
  * @return string Secret
  */
 function getWebflowSecretOctaDesk() {
-    return $_ENV['WEBFLOW_SECRET_OCTADESK'] ?? (isDevelopment()
-        ? '1dead60b2edf3bab32d8084b6ee105a9458c5cfe282e7b9d27e908f5a6c40291'
-        : '4d012059c79aa7250f4b22825487129da9291178b17bbf1dc970de119052dc8f');
+    if (empty($_ENV['WEBFLOW_SECRET_OCTADESK'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: WEBFLOW_SECRET_OCTADESK não está definido nas variáveis de ambiente');
+        throw new RuntimeException('WEBFLOW_SECRET_OCTADESK não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['WEBFLOW_SECRET_OCTADESK'];
 }
 
 /**
@@ -198,7 +213,11 @@ function getWebflowSecretOctaDesk() {
  * @return string API Key
  */
 function getOctaDeskApiKey() {
-    return $_ENV['OCTADESK_API_KEY'] ?? 'b4e081fa-94ab-4456-8378-991bf995d3ea.d3e8e579-869d-4973-b34d-82391d08702b';
+    if (empty($_ENV['OCTADESK_API_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: OCTADESK_API_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('OCTADESK_API_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['OCTADESK_API_KEY'];
 }
 
 /**
@@ -206,7 +225,326 @@ function getOctaDeskApiKey() {
  * @return string URL base
  */
 function getOctaDeskApiBase() {
-    return $_ENV['OCTADESK_API_BASE'] ?? 'https://o205242-d60.api004.octadesk.services';
+    $base = $_ENV['OCTADESK_API_BASE'] ?? '';
+    if (empty($base)) {
+        error_log('[CONFIG] ERRO CRÍTICO: OCTADESK_API_BASE não está definido nas variáveis de ambiente');
+        throw new RuntimeException('OCTADESK_API_BASE não está definido nas variáveis de ambiente');
+    }
+    return $base;
+}
+
+/**
+ * Obter número remetente OctaDesk (OCTADESK_FROM)
+ * @return string Número no formato E.164 (ex: +551132301422)
+ */
+function getOctaDeskFrom() {
+    if (empty($_ENV['OCTADESK_FROM'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: OCTADESK_FROM não está definido nas variáveis de ambiente');
+        throw new RuntimeException('OCTADESK_FROM não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['OCTADESK_FROM'];
+}
+
+// ==================== VARIÁVEIS PH3A API ====================
+
+/**
+ * Obter username da API PH3A
+ * @return string Username
+ */
+function getPh3aUsername() {
+    if (empty($_ENV['PH3A_USERNAME'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PH3A_USERNAME não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PH3A_USERNAME não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PH3A_USERNAME'];
+}
+
+/**
+ * Obter password da API PH3A
+ * @return string Password
+ */
+function getPh3aPassword() {
+    if (empty($_ENV['PH3A_PASSWORD'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PH3A_PASSWORD não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PH3A_PASSWORD não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PH3A_PASSWORD'];
+}
+
+/**
+ * Obter API Key da API PH3A
+ * @return string API Key
+ */
+function getPh3aApiKey() {
+    if (empty($_ENV['PH3A_API_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PH3A_API_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PH3A_API_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PH3A_API_KEY'];
+}
+
+/**
+ * Obter URL de login da API PH3A
+ * @return string URL de login
+ */
+function getPh3aLoginUrl() {
+    if (empty($_ENV['PH3A_LOGIN_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PH3A_LOGIN_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PH3A_LOGIN_URL não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PH3A_LOGIN_URL'];
+}
+
+/**
+ * Obter URL de dados da API PH3A
+ * @return string URL de dados
+ */
+function getPh3aDataUrl() {
+    if (empty($_ENV['PH3A_DATA_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PH3A_DATA_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PH3A_DATA_URL não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PH3A_DATA_URL'];
+}
+
+// ==================== VARIÁVEIS PLACAFIPE API ====================
+
+/**
+ * Obter token da API PlacaFipe
+ * @return string Token
+ */
+function getPlacaFipeApiToken() {
+    if (empty($_ENV['PLACAFIPE_API_TOKEN'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PLACAFIPE_API_TOKEN não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PLACAFIPE_API_TOKEN não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PLACAFIPE_API_TOKEN'];
+}
+
+/**
+ * Obter URL da API PlacaFipe
+ * @return string URL
+ */
+function getPlacaFipeApiUrl() {
+    if (empty($_ENV['PLACAFIPE_API_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: PLACAFIPE_API_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('PLACAFIPE_API_URL não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['PLACAFIPE_API_URL'];
+}
+
+// ==================== VARIÁVEIS AWS SES ====================
+
+/**
+ * Obter Access Key ID da AWS
+ * @return string Access Key ID
+ */
+function getAwsAccessKeyId() {
+    if (empty($_ENV['AWS_ACCESS_KEY_ID'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_ACCESS_KEY_ID não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_ACCESS_KEY_ID não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['AWS_ACCESS_KEY_ID'];
+}
+
+/**
+ * Obter Secret Access Key da AWS
+ * @return string Secret Access Key
+ */
+function getAwsSecretAccessKey() {
+    if (empty($_ENV['AWS_SECRET_ACCESS_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_SECRET_ACCESS_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_SECRET_ACCESS_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['AWS_SECRET_ACCESS_KEY'];
+}
+
+/**
+ * Obter região da AWS
+ * @return string Região
+ */
+function getAwsRegion() {
+    if (empty($_ENV['AWS_REGION'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_REGION não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_REGION não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['AWS_REGION'];
+}
+
+/**
+ * Obter email remetente do AWS SES
+ * @return string Email
+ */
+function getAwsSesFromEmail() {
+    if (empty($_ENV['AWS_SES_FROM_EMAIL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_SES_FROM_EMAIL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_SES_FROM_EMAIL não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['AWS_SES_FROM_EMAIL'];
+}
+
+/**
+ * Obter nome remetente do AWS SES
+ * @return string Nome
+ */
+function getAwsSesFromName() {
+    if (empty($_ENV['AWS_SES_FROM_NAME'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_SES_FROM_NAME não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_SES_FROM_NAME não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['AWS_SES_FROM_NAME'];
+}
+
+/**
+ * Obter lista de emails de administradores do AWS SES
+ * @return array Array de emails
+ */
+function getAwsSesAdminEmails() {
+    $emails = $_ENV['AWS_SES_ADMIN_EMAILS'] ?? '';
+    if (empty($emails)) {
+        error_log('[CONFIG] ERRO CRÍTICO: AWS_SES_ADMIN_EMAILS não está definido nas variáveis de ambiente');
+        throw new RuntimeException('AWS_SES_ADMIN_EMAILS não está definido nas variáveis de ambiente');
+    }
+    return array_map('trim', explode(',', $emails));
+}
+
+// ==================== VARIÁVEIS JAVASCRIPT CONFIG ====================
+
+/**
+ * Obter flag RPA Enabled (para JavaScript)
+ * @return bool
+ */
+function getRpaEnabled() {
+    $value = $_ENV['RPA_ENABLED'] ?? '';
+    if ($value === '') {
+        error_log('[CONFIG] ERRO CRÍTICO: RPA_ENABLED não está definido nas variáveis de ambiente');
+        throw new RuntimeException('RPA_ENABLED não está definido nas variáveis de ambiente');
+    }
+    return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Obter flag Use Phone API (para JavaScript)
+ * @return bool
+ */
+function getUsePhoneApi() {
+    $value = $_ENV['USE_PHONE_API'] ?? '';
+    if ($value === '') {
+        error_log('[CONFIG] ERRO CRÍTICO: USE_PHONE_API não está definido nas variáveis de ambiente');
+        throw new RuntimeException('USE_PHONE_API não está definido nas variáveis de ambiente');
+    }
+    return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Obter flag Validar PH3A (para JavaScript)
+ * @return bool
+ */
+function getValidarPh3a() {
+    $value = $_ENV['VALIDAR_PH3A'] ?? '';
+    if ($value === '') {
+        error_log('[CONFIG] ERRO CRÍTICO: VALIDAR_PH3A não está definido nas variáveis de ambiente');
+        throw new RuntimeException('VALIDAR_PH3A não está definido nas variáveis de ambiente');
+    }
+    return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Obter API Key do APILayer (para JavaScript)
+ * @return string API Key
+ */
+function getApiLayerKey() {
+    if (empty($_ENV['APILAYER_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: APILAYER_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APILAYER_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['APILAYER_KEY'];
+}
+
+/**
+ * Obter Safety Ticket (para JavaScript)
+ * @return string Ticket
+ */
+function getSafetyTicket() {
+    if (empty($_ENV['SAFETY_TICKET'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: SAFETY_TICKET não está definido nas variáveis de ambiente');
+        throw new RuntimeException('SAFETY_TICKET não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['SAFETY_TICKET'];
+}
+
+/**
+ * Obter Safety API Key (para JavaScript)
+ * @return string API Key
+ */
+function getSafetyApiKey() {
+    if (empty($_ENV['SAFETY_API_KEY'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: SAFETY_API_KEY não está definido nas variáveis de ambiente');
+        throw new RuntimeException('SAFETY_API_KEY não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['SAFETY_API_KEY'];
+}
+
+// ==================== VARIÁVEIS DE URLs DE APIs ====================
+
+/**
+ * Obter URL base do ViaCEP
+ * @return string URL base
+ */
+function getViaCepBaseUrl() {
+    if (empty($_ENV['VIACEP_BASE_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: VIACEP_BASE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('VIACEP_BASE_URL não está definido nas variáveis de ambiente');
+    }
+    return rtrim($_ENV['VIACEP_BASE_URL'], '/');
+}
+
+/**
+ * Obter URL base do APILayer
+ * @return string URL base
+ */
+function getApiLayerBaseUrl() {
+    if (empty($_ENV['APILAYER_BASE_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: APILAYER_BASE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('APILAYER_BASE_URL não está definido nas variáveis de ambiente');
+    }
+    return rtrim($_ENV['APILAYER_BASE_URL'], '/');
+}
+
+/**
+ * Obter URL base do SafetyMails Optin
+ * @return string URL base
+ */
+function getSafetyMailsOptinBase() {
+    if (empty($_ENV['SAFETYMAILS_OPTIN_BASE'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: SAFETYMAILS_OPTIN_BASE não está definido nas variáveis de ambiente');
+        throw new RuntimeException('SAFETYMAILS_OPTIN_BASE não está definido nas variáveis de ambiente');
+    }
+    return rtrim($_ENV['SAFETYMAILS_OPTIN_BASE'], '/');
+}
+
+/**
+ * Obter URL base da API RPA
+ * @return string URL base
+ */
+function getRpaApiBaseUrl() {
+    if (empty($_ENV['RPA_API_BASE_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: RPA_API_BASE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('RPA_API_BASE_URL não está definido nas variáveis de ambiente');
+    }
+    return rtrim($_ENV['RPA_API_BASE_URL'], '/');
+}
+
+/**
+ * Obter URL da página de sucesso
+ * @return string URL
+ */
+function getSuccessPageUrl() {
+    if (empty($_ENV['SUCCESS_PAGE_URL'])) {
+        error_log('[CONFIG] ERRO CRÍTICO: SUCCESS_PAGE_URL não está definido nas variáveis de ambiente');
+        throw new RuntimeException('SUCCESS_PAGE_URL não está definido nas variáveis de ambiente');
+    }
+    return $_ENV['SUCCESS_PAGE_URL'];
 }
 
 // ==================== ARRAY DE CONFIGURAÇÃO (COMPATIBILIDADE) ====================
@@ -237,6 +575,40 @@ function getConfig() {
         'octadesk' => [
             'api_key' => getOctaDeskApiKey(),
             'api_base' => getOctaDeskApiBase()
+        ],
+        'ph3a' => [
+            'username' => getPh3aUsername(),
+            'password' => getPh3aPassword(),
+            'api_key' => getPh3aApiKey(),
+            'login_url' => getPh3aLoginUrl(),
+            'data_url' => getPh3aDataUrl()
+        ],
+        'placafipe' => [
+            'api_token' => getPlacaFipeApiToken(),
+            'api_url' => getPlacaFipeApiUrl()
+        ],
+        'aws_ses' => [
+            'access_key_id' => getAwsAccessKeyId(),
+            'secret_access_key' => getAwsSecretAccessKey(),
+            'region' => getAwsRegion(),
+            'from_email' => getAwsSesFromEmail(),
+            'from_name' => getAwsSesFromName(),
+            'admin_emails' => getAwsSesAdminEmails()
+        ],
+        'javascript' => [
+            'rpa_enabled' => getRpaEnabled(),
+            'use_phone_api' => getUsePhoneApi(),
+            'validar_ph3a' => getValidarPh3a(),
+            'apilayer_key' => getApiLayerKey(),
+            'safety_ticket' => getSafetyTicket(),
+            'safety_api_key' => getSafetyApiKey()
+        ],
+        'api_urls' => [
+            'viacep_base_url' => getViaCepBaseUrl(),
+            'apilayer_base_url' => getApiLayerBaseUrl(),
+            'safetymails_optin_base' => getSafetyMailsOptinBase(),
+            'rpa_api_base_url' => getRpaApiBaseUrl(),
+            'success_page_url' => getSuccessPageUrl()
         ]
     ];
 }

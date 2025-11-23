@@ -104,23 +104,27 @@ try {
     
     // Log de resultado usando sistema profissional
     $logLevel = $result['success'] ? 'INFO' : 'WARN';
-    $logMessage = sprintf(
-        "[EMAIL-ENDPOINT] Momento: %s | DDD: %s | Celular: %s*** | Sucesso: %s | Erro: %s",
-        $emailData['momento'],
-        $ddd,
-        substr($celular, 0, 3),
-        $result['success'] ? 'SIM' : 'NÃO',
-        ($emailData['erro'] !== null) ? 'SIM' : 'NÃO'
-    );
-    $logger->log($logLevel, $logMessage, [
-        'momento' => $emailData['momento'],
-        'ddd' => $ddd,
-        'celular_masked' => substr($celular, 0, 3) . '***',
-        'success' => $result['success'],
-        'has_error' => ($emailData['erro'] !== null),
-        'total_sent' => $result['total_sent'] ?? 0,
-        'total_failed' => $result['total_failed'] ?? 0
-    ], 'EMAIL');
+    
+    // FASE 8: Verificar parametrização antes de logar
+    if (LogConfig::shouldLog($logLevel, 'EMAIL')) {
+        $logMessage = sprintf(
+            "[EMAIL-ENDPOINT] Momento: %s | DDD: %s | Celular: %s*** | Sucesso: %s | Erro: %s",
+            $emailData['momento'],
+            $ddd,
+            substr($celular, 0, 3),
+            $result['success'] ? 'SIM' : 'NÃO',
+            ($emailData['erro'] !== null) ? 'SIM' : 'NÃO'
+        );
+        $logger->log($logLevel, $logMessage, [
+            'momento' => $emailData['momento'],
+            'ddd' => $ddd,
+            'celular_masked' => substr($celular, 0, 3) . '***',
+            'success' => $result['success'],
+            'has_error' => ($emailData['erro'] !== null),
+            'total_sent' => $result['total_sent'] ?? 0,
+            'total_failed' => $result['total_failed'] ?? 0
+        ], 'EMAIL');
+    }
     
     // Retornar resultado
     // HTTP 200 mesmo quando success=false, pois a requisição foi processada corretamente
@@ -130,13 +134,15 @@ try {
     
 } catch (Exception $e) {
     // Log de erro usando sistema profissional
-    if (isset($logger)) {
+    // FASE 8: Verificar parametrização antes de logar
+    if (isset($logger) && LogConfig::shouldLog('ERROR', 'EMAIL')) {
         $logger->error("[EMAIL-ENDPOINT] Erro: " . $e->getMessage(), [
             'exception' => get_class($e),
             'file' => $e->getFile(),
             'line' => $e->getLine()
         ], 'EMAIL', $e);
     } else {
+        // Fallback: sempre logar erros críticos no error_log mesmo se parametrização desabilitar
         error_log("[EMAIL-ENDPOINT] Erro: " . $e->getMessage());
     }
     

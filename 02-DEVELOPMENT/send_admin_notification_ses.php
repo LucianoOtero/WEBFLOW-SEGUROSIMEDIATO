@@ -110,13 +110,18 @@ function enviarNotificacaoAdministradores($dados) {
             ];
         }
 
-        // Criar cliente SES
+        // Criar cliente SES com timeout configurado para evitar travamento
         $sesClient = new \Aws\Ses\SesClient([
             'version' => 'latest',
             'region'  => AWS_REGION,
             'credentials' => [
                 'key'    => AWS_ACCESS_KEY_ID,
                 'secret' => AWS_SECRET_ACCESS_KEY,
+            ],
+            // Configuração de timeout HTTP para evitar processos travados
+            'http' => [
+                'timeout' => 10,           // Timeout total da requisição (segundos)
+                'connect_timeout' => 5,    // Timeout de conexão (segundos)
             ],
         ]);
 
@@ -134,7 +139,11 @@ function enviarNotificacaoAdministradores($dados) {
         $failCount = 0;
         
         foreach (ADMIN_EMAILS as $adminEmail) {
+            // Log de debug antes de tentar enviar
+            error_log("🔍 DEBUG: Tentando enviar email para {$adminEmail} | Source: " . EMAIL_FROM_NAME . ' <' . EMAIL_FROM . '>');
+            
             try {
+                error_log("🔍 DEBUG: Chamando sesClient->sendEmail() para {$adminEmail}");
                 $result = $sesClient->sendEmail([
                     'Source' => EMAIL_FROM_NAME . ' <' . EMAIL_FROM . '>',
                     'Destination' => [
@@ -176,41 +185,113 @@ function enviarNotificacaoAdministradores($dados) {
                 ];
                 $successCount++;
                 
-                // Log de sucesso
-                error_log("✅ SES: Email enviado com sucesso para {$adminEmail} - MessageId: {$result['MessageId']}");
+                // Log de sucesso usando ProfessionalLogger
+                try {
+                    require_once __DIR__ . '/ProfessionalLogger.php';
+                    $logger = new ProfessionalLogger();
+                    $logger->log('INFO', "SES: Email enviado com sucesso para {$adminEmail}", [
+                        'email' => $adminEmail,
+                        'message_id' => $result['MessageId']
+                    ], 'EMAIL');
+                } catch (Exception $logException) {
+                    // Fallback para error_log se ProfessionalLogger falhar
+                    error_log("✅ SES: Email enviado com sucesso para {$adminEmail} - MessageId: {$result['MessageId']}");
+                }
                 
             } catch (\Aws\Exception\AwsException $e) {
+                // Logar erro DIRETO primeiro (antes de tentar ProfessionalLogger) para garantir que seja capturado
+                error_log("🔍 DEBUG: Catch AwsException executado para {$adminEmail}");
+                $errorCode = $e->getAwsErrorCode();
+                $errorMessage = $e->getAwsErrorMessage();
+                $errorType = get_class($e);
+                error_log("❌ SES: Erro ao enviar para {$adminEmail} - Type: {$errorType} | Code: {$errorCode} | Message: {$errorMessage}");
+                error_log("🔍 DEBUG: Stack trace: " . $e->getTraceAsString());
+                
                 $results[] = [
                     'email' => $adminEmail,
                     'success' => false,
-                    'error' => $e->getAwsErrorMessage(),
-                    'code' => $e->getAwsErrorCode(),
+                    'error' => $errorMessage,
+                    'code' => $errorCode,
                 ];
                 $failCount++;
                 
-                // Log de erro
-                error_log("❌ SES: Erro ao enviar para {$adminEmail} - {$e->getAwsErrorCode()}: {$e->getAwsErrorMessage()}");
+                // Log de erro usando ProfessionalLogger (se não estiver dentro de endpoint de email)
+                try {
+                    require_once __DIR__ . '/ProfessionalLogger.php';
+                    $logger = new ProfessionalLogger();
+                    $logger->log('ERROR', "SES: Erro ao enviar para {$adminEmail}", [
+                        'email' => $adminEmail,
+                        'error_code' => $errorCode,
+                        'error_message' => $errorMessage
+                    ], 'EMAIL');
+                } catch (Exception $logException) {
+                    // Erro já foi logado acima, apenas ignorar
+                }
             }
         }
 
         // Retornar resultado consolidado
-        return [
-            'success' => $successCount > 0,
-            'total_sent' => $successCount,
-            'total_failed' => $failCount,
-            'total_recipients' => count(ADMIN_EMAILS),
-            'results' => $results,
-        ];
+        // IMPORTANTE: Quando success: false, sempre incluir campo error para JavaScript
+        if ($successCount > 0) {
+            return [
+                'success' => true,
+                'total_sent' => $successCount,
+                'total_failed' => $failCount,
+                'total_recipients' => count(ADMIN_EMAILS),
+                'results' => $results,
+            ];
+        } else {
+            // Quando success: false, sempre incluir campo error
+            $errorMessage = $failCount > 0 
+                ? "Falha ao enviar para {$failCount} de " . count(ADMIN_EMAILS) . " destinatário(s). Verifique os detalhes em 'results'."
+                : "Nenhum email foi enviado. Verifique se ADMIN_EMAILS está definido e não está vazio.";
+            
+            return [
+                'success' => false,
+                'error' => $errorMessage,
+                'total_sent' => 0,
+                'total_failed' => $failCount,
+                'total_recipients' => count(ADMIN_EMAILS),
+                'results' => $results,
+            ];
+        }
 
     } catch (\Aws\Exception\AwsException $e) {
-        error_log("❌ SES: Erro na configuração/cliente - {$e->getAwsErrorCode()}: {$e->getAwsErrorMessage()}");
+        // Log de erro usando ProfessionalLogger
+        try {
+            require_once __DIR__ . '/ProfessionalLogger.php';
+            $logger = new ProfessionalLogger();
+            $logger->log('ERROR', "SES: Erro na configuração/cliente", [
+                'error_code' => $e->getAwsErrorCode(),
+                'error_message' => $e->getAwsErrorMessage()
+            ], 'EMAIL');
+        } catch (Exception $logException) {
+            // Fallback para error_log se ProfessionalLogger falhar
+            error_log("❌ SES: Erro na configuração/cliente - {$e->getAwsErrorCode()}: {$e->getAwsErrorMessage()}");
+        }
         return [
             'success' => false,
             'error' => $e->getAwsErrorMessage(),
             'code' => $e->getAwsErrorCode(),
         ];
     } catch (Exception $e) {
-        error_log("❌ SES: Erro geral - {$e->getMessage()}");
+        // Log de erro DIRETO primeiro
+        error_log("🔍 DEBUG: Catch Exception EXTERNO executado (erro geral)");
+        $errorType = get_class($e);
+        $errorMessage = $e->getMessage();
+        error_log("❌ SES: Erro geral - Type: {$errorType} | Message: {$errorMessage}");
+        error_log("🔍 DEBUG: Stack trace: " . $e->getTraceAsString());
+        
+        // Log de erro usando ProfessionalLogger
+        try {
+            require_once __DIR__ . '/ProfessionalLogger.php';
+            $logger = new ProfessionalLogger();
+            $logger->log('ERROR', "SES: Erro geral", [
+                'error_message' => $errorMessage
+            ], 'EMAIL');
+        } catch (Exception $logException) {
+            // Erro já foi logado acima
+        }
         return [
             'success' => false,
             'error' => $e->getMessage(),

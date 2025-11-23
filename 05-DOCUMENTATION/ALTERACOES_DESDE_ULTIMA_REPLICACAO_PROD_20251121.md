@@ -1,10 +1,10 @@
 # 📋 ALTERAÇÕES DESDE A ÚLTIMA REPLICAÇÃO PARA PRODUÇÃO
 
 **Data de Criação:** 21/11/2025  
-**Última Atualização:** 22/11/2025  
-**Período:** 16/11/2025 até 22/11/2025  
+**Última Atualização:** 23/11/2025  
+**Período:** 16/11/2025 até 23/11/2025  
 **Última Replicação PROD:** 16/11/2025  
-**Status:** ⏳ **ALTERAÇÕES PENDENTES DE REPLICAÇÃO**
+**Status:** ⏳ **ALTERAÇÕES PENDENTES DE REPLICAÇÃO** (exceto FooterCodeSiteDefinitivoCompleto.js - já deployado)
 
 ---
 
@@ -132,7 +132,7 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 ### **2.1. Arquivos JavaScript Modificados**
 
 #### **2.1.1. `FooterCodeSiteDefinitivoCompleto.js`**
-- **Data:** 21/11/2025
+- **Data:** 21/11/2025 (primeira modificação)
 - **Projetos:** 
   - Eliminação de Variáveis Hardcoded
   - Mover Parâmetros para Variáveis de Ambiente PHP
@@ -153,7 +153,23 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
     ```javascript
     const validLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE'];
     ```
-- **Status:** ✅ Deployado em DEV (parcial), ⏳ Pendente atualização completa
+- **Status:** ✅ Deployado em DEV
+
+- **Data:** 23/11/2025 (segunda modificação - correções GCLID)
+- **Projeto:** Correção de Captura e Preenchimento de GCLID
+- **Alterações:**
+  - Corrigida captura de GCLID da URL e salvamento em cookie
+  - Corrigido preenchimento automático de campos `GCLID_FLD`
+  - Adicionada função `executeGCLIDFill` com verificação de `document.readyState`
+  - Adicionada função `fillGCLIDFields` com busca por ID e NAME
+  - Adicionado `MutationObserver` para campos dinâmicos
+  - Adicionado retry com intervalos de 1s e 3s
+  - Adicionada validação final com log de confirmação
+  - Melhorado tratamento de erros e logging
+- **Status:** ✅ Deployado em DEV e ✅ **DEPLOYADO EM PROD** (23/11/2025)
+- **Hash SHA256 PROD:** `A3CC0589CB085B78E28FB79314D4F965A597EAF5FD2C40D3B8846326621512A2`
+- **Backup PROD:** `/var/www/html/prod/root/backups/deploy_footercode_20251123_130756/FooterCodeSiteDefinitivoCompleto.js`
+- **Relatório:** `RELATORIO_DEPLOY_FOOTERCODE_PROD_GCLID_20251123.md`
 
 #### **2.1.2. `MODAL_WHATSAPP_DEFINITIVO.js`**
 - **Data:** 21/11/2025 (primeira modificação)
