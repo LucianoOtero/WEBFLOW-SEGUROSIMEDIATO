@@ -2680,7 +2680,8 @@
                 'PLACA': 'placa',
                 'MARCA': 'marca',
                 'CEP': 'cep',
-                'DATA-DE-NASCIMENTO': 'data_nascimento'
+                'DATA-DE-NASCIMENTO': 'data_nascimento',
+                'NOME': 'nome'  // ✅ NOVO: Mapeamento para compatibilidade com formulários Webflow que enviam NOME (maiúsculas)
                 // REMOVIDO: 'TIPO-DE-VEICULO' (convertido separadamente)
             };
             

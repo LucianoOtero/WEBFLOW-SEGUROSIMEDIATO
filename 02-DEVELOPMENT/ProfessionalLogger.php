@@ -939,6 +939,129 @@ class ProfessionalLogger {
     }
     
     /**
+     * Fazer requisição HTTP usando cURL com fallback para file_get_contents
+     * @param string $endpoint URL do endpoint
+     * @param string $payload Payload JSON
+     * @param int $timeout Timeout em segundos
+     * @return array Resultado com informações detalhadas
+     */
+    private function makeHttpRequest($endpoint, $payload, $timeout = 10) {
+        // Verificar se cURL está disponível
+        if (!function_exists('curl_init')) {
+            // Fallback para file_get_contents
+            return $this->makeHttpRequestFileGetContents($endpoint, $payload, $timeout);
+        }
+        
+        // Usar cURL para melhor diagnóstico
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'User-Agent: ProfessionalLogger-EmailNotification/1.0'
+            ],
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload
+        ]);
+        
+        $startTime = microtime(true);
+        $result = curl_exec($ch);
+        $duration = microtime(true) - $startTime;
+        
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        $curlErrno = curl_errno($ch);
+        $connectTime = curl_getinfo($ch, CURLINFO_CONNECT_TIME);
+        
+        curl_close($ch);
+        
+        // Identificar tipo de erro
+        $errorCategory = 'NONE';
+        if ($result === false) {
+            if ($curlErrno === CURLE_OPERATION_TIMEOUTED) {
+                $errorCategory = 'TIMEOUT';
+            } elseif ($curlErrno === CURLE_COULDNT_RESOLVE_HOST) {
+                $errorCategory = 'DNS';
+            } elseif ($curlErrno === CURLE_SSL_CONNECT_ERROR) {
+                $errorCategory = 'SSL';
+            } elseif ($curlErrno === CURLE_COULDNT_CONNECT) {
+                $errorCategory = 'CONNECTION_REFUSED';
+            } else {
+                $errorCategory = 'UNKNOWN';
+            }
+        }
+        
+        // Logar resultado detalhado
+        if ($result === false) {
+            error_log("[ProfessionalLogger] cURL falhou após " . round($duration, 2) . "s | Tipo: {$errorCategory} | Erro: {$curlError} | Código: {$curlErrno} | Endpoint: {$endpoint}");
+        } else {
+            error_log("[ProfessionalLogger] cURL sucesso após " . round($duration, 2) . "s | HTTP: {$httpCode} | Conexão: " . round($connectTime, 2) . "s | Endpoint: {$endpoint}");
+        }
+        
+        return [
+            'success' => $result !== false && $httpCode === 200,
+            'data' => $result,
+            'http_code' => $httpCode,
+            'error' => $curlError,
+            'errno' => $curlErrno,
+            'error_category' => $errorCategory,
+            'duration' => $duration,
+            'connect_time' => $connectTime
+        ];
+    }
+
+    /**
+     * Fallback: Fazer requisição HTTP usando file_get_contents
+     * @param string $endpoint URL do endpoint
+     * @param string $payload Payload JSON
+     * @param int $timeout Timeout em segundos
+     * @return array Resultado com informações básicas
+     */
+    private function makeHttpRequestFileGetContents($endpoint, $payload, $timeout = 10) {
+        $headerString = "Content-Type: application/json\r\n" .
+                       "User-Agent: ProfessionalLogger-EmailNotification/1.0";
+        
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => $headerString,
+                'content' => $payload,
+                'timeout' => $timeout,
+                'ignore_errors' => true
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ]);
+        
+        $startTime = microtime(true);
+        $result = @file_get_contents($endpoint, false, $context);
+        $duration = microtime(true) - $startTime;
+        
+        if ($result === false) {
+            $error = error_get_last();
+            error_log("[ProfessionalLogger] file_get_contents falhou após " . round($duration, 2) . "s | Erro: " . ($error['message'] ?? 'Desconhecido') . " | Endpoint: {$endpoint}");
+        }
+        
+        return [
+            'success' => $result !== false,
+            'data' => $result,
+            'http_code' => null,
+            'error' => $result === false ? ($error['message'] ?? 'Erro desconhecido') : null,
+            'errno' => null,
+            'error_category' => 'UNKNOWN',
+            'duration' => $duration,
+            'connect_time' => null
+        ];
+    }
+
+    /**
      * Enviar notificação por email quando ERROR ou FATAL
      * 
      * @param string $level Nível do log ('ERROR' ou 'FATAL')
@@ -1029,41 +1152,20 @@ class ProfessionalLogger {
                 }
             }
             
-            // Preparar contexto HTTP (assíncrono, não bloqueia)
-            // IMPORTANTE: Header deve ser string com \r\n, não array
-            $headerString = "Content-Type: application/json\r\n" .
-                           "User-Agent: ProfessionalLogger-EmailNotification/1.0";
+            // Fazer requisição HTTP usando cURL (com fallback para file_get_contents)
+            $response = $this->makeHttpRequest($endpoint, $jsonPayload, 10);
+            $result = $response['data'];
             
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'POST',
-                    'header' => $headerString,
-                    'content' => $jsonPayload,
-                    'timeout' => 10, // Aumentado para 10 segundos
-                    'ignore_errors' => true // Não lançar exceção em HTTP errors
-                ],
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
-            ]);
-            
-            // Fazer requisição e capturar erros para debug
-            $result = @file_get_contents($endpoint, false, $context);
-            
-            // Logar resultado para debug (sem usar ProfessionalLogger para evitar loop)
-            if ($result === false) {
-                $error = error_get_last();
-                // Logar em arquivo de erro do PHP (não usar ProfessionalLogger)
-                error_log("[ProfessionalLogger] Falha ao enviar email: " . ($error['message'] ?? 'Erro desconhecido') . " | Endpoint: " . $endpoint);
+            // Usar informações detalhadas para logs
+            if (!$response['success']) {
+                error_log("[ProfessionalLogger] Falha detalhada | Tipo: {$response['error_category']} | HTTP: {$response['http_code']} | Erro: {$response['error']} | Endpoint: {$endpoint}");
             } else {
                 // Logar sucesso para debug
                 $responseData = @json_decode($result, true);
                 if ($responseData && isset($responseData['success'])) {
-                    error_log("[ProfessionalLogger] Email enviado: " . ($responseData['success'] ? 'SUCESSO' : 'FALHOU') . " | Total enviado: " . ($responseData['total_sent'] ?? 0) . " | Endpoint: " . $endpoint);
+                    error_log("[ProfessionalLogger] Email enviado: " . ($responseData['success'] ? 'SUCESSO' : 'FALHOU') . " | Total enviado: " . ($responseData['total_sent'] ?? 0) . " | Endpoint: {$endpoint}");
                 } else {
-                    error_log("[ProfessionalLogger] Resposta inesperada do endpoint: " . substr($result, 0, 200) . " | Endpoint: " . $endpoint);
+                    error_log("[ProfessionalLogger] Resposta inesperada do endpoint: " . substr($result, 0, 200) . " | Endpoint: {$endpoint}");
                 }
             }
             

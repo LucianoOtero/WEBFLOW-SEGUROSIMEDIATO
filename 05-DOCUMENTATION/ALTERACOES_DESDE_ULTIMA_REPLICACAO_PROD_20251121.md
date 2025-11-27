@@ -1,7 +1,7 @@
 # 📋 ALTERAÇÕES DESDE A ÚLTIMA REPLICAÇÃO PARA PRODUÇÃO
 
 **Data de Criação:** 21/11/2025  
-**Última Atualização:** 27/11/2025  
+**Última Atualização:** 27/11/2025 (Variável Global Versão)  
 **Período:** 16/11/2025 até 27/11/2025  
 **Última Replicação PROD:** 16/11/2025  
 **Status:** ⏳ **ALTERAÇÕES PENDENTES DE REPLICAÇÃO** (exceto FooterCodeSiteDefinitivoCompleto.js - correção GCLID já deployado em PROD)
@@ -206,6 +206,18 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 - **Hash SHA256 DEV:** `1FA6FA90A81A80F30F4DD709A4DBE25441434279E64B94498B557E734F638D1B`
 - **Backup Local:** `02-DEVELOPMENT/FooterCodeSiteDefinitivoCompleto.js.backup_20251127_091358`
 - **Documentação:** `PROJETO_SIMPLIFICACAO_SENTRY_INICIO_20251127.md`
+
+- **Data:** 27/11/2025 (quinta modificação - variável global versão)
+- **Projeto:** Adicionar Variável Global de Versão e Log de Carregamento
+- **Alterações:**
+  - Adicionada variável global `window.versao = '1.7.0'` no início do arquivo (linha 87)
+  - Implementado log automático de carregamento do arquivo usando `window.novo_log()`
+  - Log inclui versão, timestamp e estado do DOM (`readyState`)
+  - Log executado após definição de `window.novo_log()` para garantir disponibilidade
+  - Tratamento de erro silencioso implementado
+- **Status:** ✅ Deployado em DEV
+- **Hash SHA256 DEV:** `F4D1B16EB36A7DAFD3D87A396FB544920907887D13D5DA71BD942CCF6BCAC81B`
+- **Backup Local:** `02-DEVELOPMENT/FooterCodeSiteDefinitivoCompleto.js.backup_YYYYMMDD_HHMMSS`
 
 #### **2.1.2. `MODAL_WHATSAPP_DEFINITIVO.js`**
 - **Data:** 21/11/2025 (primeira modificação)

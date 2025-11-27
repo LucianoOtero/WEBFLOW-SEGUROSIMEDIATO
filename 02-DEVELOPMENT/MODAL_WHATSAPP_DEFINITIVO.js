@@ -270,13 +270,82 @@ $(function() {
     // Log usando sistema unificado
     if (window.novo_log) {
       const logLevel = severity === 'error' ? 'ERROR' : severity === 'warning' ? 'WARN' : 'INFO';
-      window.novo_log(logLevel, 'MODAL', `[${severity.toUpperCase()}] ${eventType}`, {
-        has_ddd: !!data.ddd,
-        has_celular: !!data.celular,
-        has_cpf: !!data.cpf,
-        has_nome: !!data.nome,
-        environment: logData.environment
-      }, 'OPERATION', 'SIMPLE');
+      
+      // ✅ ADICIONAR: Estrutura diferente para erros
+      if (severity === 'error') {
+        // Para erros, não verificar campos que não existem
+        window.novo_log(logLevel, 'MODAL', `[${severity.toUpperCase()}] ${eventType}`, {
+          error: data.error || data.errorMessage || 'unknown_error',
+          attempt: data.attempt || 0,
+          duration: data.duration || 0,
+          url: data.url || window.location.href,
+          errorType: data.errorType || 'unknown',
+          environment: logData.environment
+          // ✅ NÃO verificar ddd, celular, cpf, nome quando for erro
+        }, 'OPERATION', 'SIMPLE');
+      } else {
+        // Estrutura normal para outros casos (info, warn)
+        window.novo_log(logLevel, 'MODAL', `[${severity.toUpperCase()}] ${eventType}`, {
+          has_ddd: !!data.ddd,
+          has_celular: !!data.celular,
+          has_cpf: !!data.cpf,
+          has_nome: !!data.nome,
+          environment: logData.environment
+        }, 'OPERATION', 'SIMPLE');
+      }
+    }
+  }
+  
+  /**
+   * Função para logar erro no Sentry
+   * 
+   * @param {Object} errorData - Dados do erro
+   * @param {string} errorData.error - Mensagem de erro
+   * @param {string} errorData.component - Componente onde erro ocorreu
+   * @param {string} errorData.action - Ação que causou erro
+   * @param {number} errorData.attempt - Número da tentativa
+   * @param {number} errorData.duration - Duração em ms
+   * @param {string} errorData.errorMessage - Mensagem de erro completa
+   * @param {string} errorData.url - URL da requisição
+   * @param {string} errorData.errorType - Tipo de erro (AbortError, TypeError, etc.)
+   * @param {string} errorData.stack - Stack trace do erro
+   */
+  function logErrorToSentry(errorData) {
+    // Verificar se Sentry está disponível
+    if (typeof Sentry === 'undefined') {
+      return; // Sentry não disponível - não quebrar aplicação
+    }
+    
+    try {
+      // Usar detecção de ambiente existente
+      const environment = isDevelopmentEnvironment() ? 'dev' : 'prod';
+      
+      Sentry.captureMessage(errorData.error || 'unknown_error', {
+        level: 'error',
+        tags: {
+          component: errorData.component || 'MODAL',
+          action: errorData.action || 'unknown',
+          environment: environment // ✅ Usa função existente
+        },
+        extra: {
+          error: errorData.error,
+          attempt: errorData.attempt,
+          duration: errorData.duration,
+          url: errorData.url || window.location.href,
+          userAgent: navigator.userAgent,
+          errorMessage: errorData.errorMessage,
+          errorType: errorData.errorType,
+          stack: errorData.stack,
+          // ⚠️ Dados sensíveis serão removidos pelo beforeSend no FooterCode
+        }
+      });
+    } catch (err) {
+      // Não quebrar aplicação se Sentry falhar
+      if (window.novo_log) {
+        window.novo_log('WARN', 'SENTRY', 'Falha ao logar no Sentry (não bloqueante)', {
+          error: err.message
+        }, 'ERROR_HANDLING', 'SIMPLE');
+      }
     }
   }
   
@@ -477,11 +546,15 @@ $(function() {
    * @returns {Promise}
    */
   async function fetchWithRetry(url, options, maxRetries = 2, retryDelay = 1000) {
+    const startTime = Date.now(); // ✅ ADICIONAR: Medir duração total
+    
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const attemptStartTime = Date.now(); // ✅ ADICIONAR: Medir duração de cada tentativa
+      
       try {
         // Criar AbortController para timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // ✅ CORREÇÃO: 60s timeout (alinhado com Nginx)
         
         const response = await fetch(url, {
           ...options,
@@ -506,15 +579,55 @@ $(function() {
         return { success: false, response, attempt };
         
       } catch (error) {
-        // Erro de rede ou timeout - tentar retry
+        // ✅ ADICIONAR: Medir duração (após linha 508)
+        const attemptDuration = Date.now() - attemptStartTime;
+        const totalDuration = Date.now() - startTime;
+        
+        // ✅ ADICIONAR: Log detalhado do erro (antes do retry check)
+        if (window.novo_log) {
+          window.novo_log('ERROR', 'MODAL', 'fetchWithRetry error', {
+            error_type: error.name || 'UnknownError',
+            error_message: error.message || 'Erro desconhecido',
+            url: url,
+            attempt: attempt + 1,
+            attempt_duration: attemptDuration,
+            total_duration: totalDuration,
+            stack: error.stack || 'N/A'
+          }, 'ERROR_HANDLING', 'DETAILED');
+        }
+        
+        // Erro de rede ou timeout - tentar retry (código existente mantido)
         if (attempt < maxRetries && (error.name === 'TypeError' || error.name === 'AbortError')) {
+          // ✅ MELHORAR: Log de retry com mais detalhes (modificar linha 511-513)
           if (window.novo_log) {
-            window.novo_log('WARN', 'MODAL', `Erro de rede na tentativa ${attempt + 1}/${maxRetries + 1}, retry...`, null, 'ERROR_HANDLING', 'SIMPLE');
+            window.novo_log('WARN', 'MODAL', `Erro de rede na tentativa ${attempt + 1}/${maxRetries + 1}, retry...`, {
+              error_type: error.name,
+              error_message: error.message,
+              url: url,
+              attempt: attempt + 1,
+              duration: attemptDuration
+            }, 'ERROR_HANDLING', 'DETAILED'); // ✅ MUDAR de 'SIMPLE' para 'DETAILED' e adicionar dados
           }
           await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
           continue;
         }
         
+        // ✅ ADICIONAR: Logar no Sentry quando todas as tentativas falham (antes do return)
+        if (typeof logErrorToSentry === 'function') {
+          logErrorToSentry({
+            error: error.name === 'AbortError' ? 'fetch_timeout' : 'fetch_network_error',
+            component: 'MODAL',
+            action: 'fetchWithRetry',
+            attempt: attempt + 1,
+            duration: totalDuration,
+            errorMessage: error.message,
+            url: url,
+            errorType: error.name,
+            stack: error.stack
+          });
+        }
+        
+        // Código existente mantido
         return { success: false, error, attempt };
       }
     }
@@ -1273,7 +1386,25 @@ $(function() {
           error: errorMsg,
           attempt: result.attempt + 1
         }, 'error');
-        logEvent('whatsapp_modal_espocrm_update_error', { error: errorMsg, attempt: result.attempt + 1 }, 'error');
+        logEvent('whatsapp_modal_espocrm_update_error', { 
+          error: errorMsg, 
+          attempt: result.attempt + 1,
+          duration: result.duration || 0,
+          url: endpointUrl
+        }, 'error');
+        
+        // ✅ ADICIONAR: Logar no Sentry
+        if (typeof logErrorToSentry === 'function') {
+          logErrorToSentry({
+            error: 'whatsapp_modal_espocrm_update_error',
+            component: 'MODAL',
+            action: 'espocrm_update',
+            attempt: result.attempt + 1,
+            duration: result.duration || 0,
+            errorMessage: errorMsg,
+            url: endpointUrl
+          });
+        }
         
         // 📧 ENVIAR EMAIL PARA ADMINISTRADORES APÓS ERRO DE REQUEST (UPDATE)
         sendAdminEmailNotification(webhook_data, null, {
@@ -1410,7 +1541,26 @@ $(function() {
           error: errorMsg,
           attempt: result.attempt + 1
         }, 'error');
-        logEvent('whatsapp_modal_octadesk_initial_error', { error: errorMsg, attempt: result.attempt + 1 }, 'error');
+        logEvent('whatsapp_modal_octadesk_initial_error', { 
+          error: errorMsg, 
+          attempt: result.attempt + 1,
+          duration: result.duration || 0,
+          url: endpointUrl
+        }, 'error');
+        
+        // ✅ ADICIONAR: Logar no Sentry
+        if (typeof logErrorToSentry === 'function') {
+          logErrorToSentry({
+            error: 'whatsapp_modal_octadesk_initial_error',
+            component: 'MODAL',
+            action: 'octadesk_initial',
+            attempt: result.attempt + 1,
+            duration: result.duration || 0,
+            errorMessage: errorMsg,
+            url: endpointUrl
+          });
+        }
+        
         return { success: false, error: errorMsg, attempt: result.attempt + 1 };
       }
     } catch (error) {
@@ -1534,6 +1684,23 @@ $(function() {
       return { success: false, error: 'dataLayer_unavailable' };
     }
     
+    // Formatar telefone para E.164 (+55...) para Enhanced Conversions
+    let rawPhone = '';
+    if (ddd && celular && typeof onlyDigits === 'function') {
+      const combined = onlyDigits(ddd + celular);
+      if (combined.length >= 10 && combined.length <= 11) {
+        rawPhone = "+55" + combined;
+      } else if (combined.length === 12 && combined.startsWith('55')) {
+        rawPhone = "+" + combined;
+      }
+    }
+    
+    // Construir objeto user_data para Enhanced Conversions
+    const userData = {};
+    if (rawPhone) {
+      userData.phone_number = rawPhone;
+    }
+    
     // Construir dados do evento GTM usando variáveis configuráveis
     const gtmEventData = {
       'event': window.GTM_EVENT_NAME_INITIAL || 'whatsapp_modal_initial_contact',
@@ -1554,6 +1721,11 @@ $(function() {
       'timestamp': new Date().toISOString(),
       'environment': isDevelopmentEnvironment() ? 'dev' : 'prod'
     };
+    
+    // Adicionar user_data apenas se houver dados para Enhanced Conversions
+    if (Object.keys(userData).length > 0) {
+      gtmEventData.user_data = userData;
+    }
     
     // ✅ V3: LOG DO OBJETO COMPLETO QUE SERÁ ENVIADO AO GTM
     debugLog('GTM', 'EVENT_DATA_READY', {
@@ -1576,6 +1748,22 @@ $(function() {
       dataLayer_length_after: window.dataLayer.length,
       dataLayer_item: window.dataLayer[window.dataLayer.length - 1]
     }, 'info');
+    
+    // ✅ LOG ESPECÍFICO PARA ENHANCED CONVERSIONS
+    if (gtmEventData.user_data && gtmEventData.user_data.phone_number) {
+      debugLog('GTM', 'ENHANCED_CONVERSIONS_ENVIADO', {
+        event: gtmEventData.event,
+        phone_number: gtmEventData.user_data.phone_number,
+        has_email: !!gtmEventData.user_data.email,
+        user_data: gtmEventData.user_data
+      }, 'info');
+    } else {
+      debugLog('GTM', 'ENHANCED_CONVERSIONS_NAO_ENVIADO', {
+        event: gtmEventData.event,
+        reason: 'user_data ausente ou phone_number não formatado',
+        has_user_data: !!gtmEventData.user_data
+      }, 'warn');
+    }
     
     logEvent('whatsapp_modal_gtm_initial_conversion', { 
       event_name: gtmEventData.event,

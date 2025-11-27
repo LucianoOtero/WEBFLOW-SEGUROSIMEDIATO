@@ -82,199 +82,46 @@
  */
 
 // ======================
-// SENTRY ERROR TRACKING
-// Integração: 27/11/2025
-// Versão: Simplificada - Início do arquivo
+// VARIÁVEL GLOBAL DE VERSÃO
 // ======================
-(function initSentryTracking() {
+window.versao = '1.7.0';
+    
+    // ======================
+// CONFIGURAÇÃO DE LOGGING E FUNÇÕES CENTRALIZADAS (MOVIDAS PARA O INÍCIO)
+// PROJETO: Mover novo_log() para Início e Substituir console.log
+// Data: 27/11/2025
+    // ======================
+(function initLoggingSystem() {
   'use strict';
-  
-  // Evitar duplicação
-  if (window.SENTRY_INITIALIZED) {
-    return;
-  }
-  
-  // Função helper para detectar ambiente
-  function getEnvironment() {
-    const hostname = window.location.hostname;
-    const href = window.location.href;
     
-    // Prioridade 1: Detecção explícita via hostname
-    if (hostname.includes('dev.') || 
-        hostname.includes('localhost') ||
-        hostname.includes('127.0.0.1') ||
-        hostname.includes('-dev.webflow.io') ||
-        hostname.includes('.dev.') ||
-        href.includes('/dev/')) {
-      return 'dev';
-    }
-    
-    // Prioridade 2: Verificar webflow.io (geralmente é DEV)
-    if (hostname.indexOf('webflow.io') !== -1) {
-      return 'dev';
-    }
-    
-    // Prioridade 3: Usar window.APP_ENVIRONMENT se disponível
-    if (typeof window.APP_ENVIRONMENT !== 'undefined' && window.APP_ENVIRONMENT) {
-      return window.APP_ENVIRONMENT === 'dev' ? 'dev' : 'prod';
-    }
-    
-    // Prioridade 4: Usar window.LOG_CONFIG.environment se disponível
-    if (typeof window.LOG_CONFIG !== 'undefined' && window.LOG_CONFIG && window.LOG_CONFIG.environment) {
-      return window.LOG_CONFIG.environment === 'dev' ? 'dev' : 'prod';
-    }
-    
-    // Prioridade 5: Fallback para prod
-    return 'prod';
-  }
-  
-  // Expor função globalmente para testes e debug
-  window.getEnvironment = getEnvironment;
-  
-  // Função centralizada de inicialização
-  function initializeSentry() {
-    if (window.SENTRY_INITIALIZED || typeof Sentry === 'undefined') {
-      return;
-    }
-    
-    try {
-      const environment = getEnvironment();
-      
-      Sentry.init({
-        dsn: "https://9cbeefde9ce7c0b959b51a4c5e6e52dd@o4510432472530944.ingest.de.sentry.io/4510432482361424",
-        environment: environment,
-        tracesSampleRate: 0.1,
-        beforeSend: function(event, hint) {
-          if (event && event.extra) {
-            delete event.extra.ddd;
-            delete event.extra.celular;
-            delete event.extra.cpf;
-            delete event.extra.nome;
-            delete event.extra.email;
-            delete event.extra.phone;
-            delete event.extra.phone_number;
-          }
-          
-          if (event && event.contexts) {
-            if (event.contexts.user) {
-              delete event.contexts.user.email;
-              delete event.contexts.user.phone;
-            }
-          }
-          
-          return event;
-        },
-        ignoreErrors: [
-          'ResizeObserver loop limit exceeded',
-          'Non-Error promise rejection captured',
-          'Script error.',
-          'NetworkError'
-        ]
-      });
-      
-      window.SENTRY_INITIALIZED = true;
-      
-      // Log de inicialização (fallback para console se novo_log não estiver disponível)
-      if (typeof window.novo_log === 'function') {
-        window.novo_log('INFO', 'SENTRY', 'Sentry inicializado com sucesso', {
-          environment: environment,
-          method: 'simplified_init'
-        }, 'INIT', 'SIMPLE');
-      } else {
-        console.log('[SENTRY] Sentry inicializado com sucesso (environment: ' + environment + ')');
-      }
-      
-      // ✅ Console.log para indicar que Sentry foi carregado e inicializado
-      console.log('[SENTRY] Status:', {
-        carregado: typeof Sentry !== 'undefined',
-        inicializado: window.SENTRY_INITIALIZED,
-        environment: environment,
-        timestamp: new Date().toISOString()
-      });
-    } catch (sentryError) {
-      // Não quebrar aplicação se Sentry falhar
-      const errorMsg = sentryError.message || 'Erro desconhecido';
-      if (typeof window.novo_log === 'function') {
-        window.novo_log('WARN', 'SENTRY', 'Erro ao inicializar Sentry (não bloqueante)', {
-          error: errorMsg,
-          stack: sentryError.stack
-        }, 'INIT', 'SIMPLE');
-      } else {
-        console.error('[SENTRY] Erro ao inicializar Sentry:', errorMsg);
-      }
-    }
-  }
-  
-  // Se Sentry já está carregado, inicializar diretamente
-  if (typeof Sentry !== 'undefined') {
-    // ✅ Console.log para indicar que Sentry já está carregado
-    console.log('[SENTRY] Sentry já está carregado, inicializando...');
-    initializeSentry();
-    return;
-  }
-  
-  // ✅ Console.log para indicar que Sentry será carregado
-  console.log('[SENTRY] Carregando SDK do Sentry...');
-  
-  // Se não está carregado, carregar e inicializar após carregar
-  const script = document.createElement('script');
-  script.src = 'https://js-de.sentry-cdn.com/9cbeefde9ce7c0b959b51a4c5e6e52dd.min.js';
-  script.crossOrigin = 'anonymous';
-  script.async = true;
-  
-  script.onload = function() {
-    // ✅ Console.log para indicar que Sentry foi carregado
-    console.log('[SENTRY] SDK do Sentry carregado com sucesso, inicializando...');
-    initializeSentry();
-  };
-  
-  script.onerror = function() {
-    // Não quebrar aplicação se script falhar ao carregar
-    if (typeof window.novo_log === 'function') {
-      window.novo_log('WARN', 'SENTRY', 'Falha ao carregar SDK do Sentry (não bloqueante)', null, 'INIT', 'SIMPLE');
-    } else {
-      console.warn('[SENTRY] Falha ao carregar SDK do Sentry');
-    }
-  };
-  
-  document.head.appendChild(script);
-})();
-
-// ======================
-// TRATAMENTO DE ERRO GLOBAL (Recomendação do Engenheiro)
-// ======================
-(function() {
-  'use strict';
-  
   try {
-    
-    // ======================
-    // CARREGAMENTO DE VARIÁVEIS DE AMBIENTE (DATA ATTRIBUTES)
-    // ======================
-    // Solução definitiva: ler variáveis do data attribute do próprio script tag
-    // Elimina necessidade de carregamento assíncrono, polling e detecção complexa
-    
+    // Função helper para ler data attribute do script tag
+    function getDataAttribute(attributeName) {
     const currentScript = document.currentScript;
-    
-    // Função helper para ler data attribute e lançar erro se não estiver definido
-    function getRequiredDataAttribute(script, attributeName, displayName) {
-      const value = script && script.dataset ? script.dataset[attributeName] : null;
-      if (value === null || value === undefined || value === '') {
-        const errorMsg = `[CONFIG] ERRO CRÍTICO: ${displayName} não está definido no script tag (data-${attributeName})`;
-        console.error(errorMsg);
-        throw new Error(errorMsg);
+      if (currentScript && currentScript.dataset && currentScript.dataset[attributeName]) {
+        return currentScript.dataset[attributeName];
       }
-      return value;
+      // Fallback: buscar em todos os scripts
+      const scripts = document.getElementsByTagName('script');
+      for (let script of scripts) {
+        if (script.src && script.src.includes('bssegurosimediato.com.br') && script.dataset && script.dataset[attributeName]) {
+          return script.dataset[attributeName];
+        }
+      }
+      return null;
     }
     
-    // Função helper para ler data attribute boolean
-    function getRequiredBooleanDataAttribute(script, attributeName, displayName) {
-      const value = getRequiredDataAttribute(script, attributeName, displayName);
-      return value === 'true' || value === '1' || value === true;
+    // Tentar ler APP_BASE_URL do data attribute (se disponível)
+    if (!window.APP_BASE_URL) {
+      const appBaseUrl = getDataAttribute('appBaseUrl');
+      if (appBaseUrl) {
+        window.APP_BASE_URL = appBaseUrl;
+      }
     }
     
-    // Função helper para buscar em todos os scripts (fallback se currentScript não disponível)
-    function findScriptWithAttributes() {
+    // Ler configuração de logging do data attribute do script tag
+    let logConfigFromAttribute = {};
+    const currentScript = document.currentScript || (() => {
       const scripts = document.getElementsByTagName('script');
       for (let script of scripts) {
         if (script.src && script.src.includes('bssegurosimediato.com.br') && script.dataset) {
@@ -282,72 +129,7 @@
         }
       }
       return null;
-    }
-    
-    const scriptElement = currentScript || findScriptWithAttributes();
-    
-    if (!scriptElement || !scriptElement.dataset) {
-      throw new Error('[CONFIG] ERRO CRÍTICO: Script tag não encontrado ou sem data attributes');
-    }
-    
-    // Variáveis obrigatórias (sem fallbacks)
-    // Variáveis injetadas pelo PHP (config_env.js.php) - OBRIGATÓRIAS
-    // Estas variáveis devem ser carregadas ANTES deste script via config_env.js.php
-    if (typeof window.APILAYER_KEY === 'undefined' || !window.APILAYER_KEY) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: APILAYER_KEY não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.SAFETY_TICKET === 'undefined' || !window.SAFETY_TICKET) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETY_TICKET não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.SAFETY_API_KEY === 'undefined' || !window.SAFETY_API_KEY) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETY_API_KEY não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.VIACEP_BASE_URL === 'undefined' || !window.VIACEP_BASE_URL) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: VIACEP_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.APILAYER_BASE_URL === 'undefined' || !window.APILAYER_BASE_URL) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: APILAYER_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.SAFETYMAILS_OPTIN_BASE === 'undefined' || !window.SAFETYMAILS_OPTIN_BASE) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETYMAILS_OPTIN_BASE não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    if (typeof window.RPA_API_BASE_URL === 'undefined' || !window.RPA_API_BASE_URL) {
-        throw new Error('[CONFIG] ERRO CRÍTICO: RPA_API_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
-    }
-    // SAFETYMAILS_BASE_DOMAIN é opcional (tem fallback 'safetymails.com' na linha 1458)
-    // Apenas garantir que está definida (pode ser string vazia, será tratada com fallback)
-    if (typeof window.SAFETYMAILS_BASE_DOMAIN === 'undefined') {
-        // Definir como string vazia se não estiver definida (fallback será usado quando necessário)
-        window.SAFETYMAILS_BASE_DOMAIN = '';
-    }
-    
-    // Atribuir variáveis do window (já validadas acima)
-    // Nota: Estas variáveis já foram injetadas pelo config_env.js.php, apenas garantimos que estão disponíveis
-    window.APILAYER_KEY = window.APILAYER_KEY;
-    window.SAFETY_TICKET = window.SAFETY_TICKET;
-    window.SAFETY_API_KEY = window.SAFETY_API_KEY;
-    window.VIACEP_BASE_URL = window.VIACEP_BASE_URL;
-    window.APILAYER_BASE_URL = window.APILAYER_BASE_URL;
-    window.SAFETYMAILS_OPTIN_BASE = window.SAFETYMAILS_OPTIN_BASE;
-    window.RPA_API_BASE_URL = window.RPA_API_BASE_URL;
-    window.SAFETYMAILS_BASE_DOMAIN = window.SAFETYMAILS_BASE_DOMAIN;
-    
-    // Variáveis que permanecem via data-attributes (Webflow)
-    window.APP_BASE_URL = getRequiredDataAttribute(scriptElement, 'appBaseUrl', 'APP_BASE_URL');
-    window.APP_ENVIRONMENT = getRequiredDataAttribute(scriptElement, 'appEnvironment', 'APP_ENVIRONMENT');
-    window.rpaEnabled = getRequiredBooleanDataAttribute(scriptElement, 'rpaEnabled', 'rpaEnabled');
-    window.USE_PHONE_API = getRequiredBooleanDataAttribute(scriptElement, 'usePhoneApi', 'USE_PHONE_API');
-    window.VALIDAR_PH3A = getRequiredBooleanDataAttribute(scriptElement, 'validarPh3a', 'VALIDAR_PH3A');
-    window.SUCCESS_PAGE_URL = getRequiredDataAttribute(scriptElement, 'successPageUrl', 'SUCCESS_PAGE_URL');
-    window.WHATSAPP_API_BASE = getRequiredDataAttribute(scriptElement, 'whatsappApiBase', 'WHATSAPP_API_BASE');
-    window.WHATSAPP_PHONE = getRequiredDataAttribute(scriptElement, 'whatsappPhone', 'WHATSAPP_PHONE');
-    window.WHATSAPP_DEFAULT_MESSAGE = getRequiredDataAttribute(scriptElement, 'whatsappDefaultMessage', 'WHATSAPP_DEFAULT_MESSAGE');
-    
-    // ======================
-    // CONFIGURAÇÃO DE LOGGING (FASE 2: Sistema de Parametrização)
-    // ======================
-    // Ler configuração de logging do data attribute do script tag
-    let logConfigFromAttribute = {};
+    })();
     
     if (currentScript && currentScript.dataset) {
       // Ler configurações de logging do data attribute
@@ -500,22 +282,6 @@
       return messageLevel <= minLevel;
     };
     
-    // Log de confirmação da configuração (apenas em dev)
-    if (detectedEnvironment === 'dev' && window.novo_log) {
-      window.novo_log('INFO', 'CONFIG', 'Configuração de logging carregada', window.LOG_CONFIG);
-    }
-    
-    // ======================
-    // FIM DA CONFIGURAÇÃO DE LOGGING
-    // ======================
-    
-    // ======================
-    // FUNÇÕES DE LOGGING CENTRALIZADAS (MOVIDAS PARA O INÍCIO - FASE 0)
-    // ======================
-    // PROJETO: Refatorar Arquivos JavaScript (.js)
-    // Data: 18/11/2025
-    // FASE 0: Mover definições para o início para garantir disponibilidade antes de qualquer uso
-    
     /**
      * Envia log para o novo sistema profissional
      * @param {string} level - Nível do log (DEBUG, INFO, WARN, ERROR, FATAL)
@@ -525,7 +291,7 @@
      * @returns {Promise<boolean>} true se enviado com sucesso
      */
     async function sendLogToProfessionalSystem(level, category, message, data) {
-      // FASE 3: Verificar parametrização completa usando window.LOG_CONFIG
+      // Verificar parametrização completa usando window.LOG_CONFIG
       // Verificar se logs estão desabilitados globalmente
       if (!window.shouldLog || !window.shouldLog(level, category)) {
         return false;
@@ -544,20 +310,20 @@
       
       // Validar parâmetros obrigatórios
       if (!level || level === null || level === undefined || level === '') {
-        // FASE 0.1: Usar console.warn direto para prevenir loop infinito
+        // Usar console.warn direto para prevenir loop infinito
         console.warn('[LOG] sendLogToProfessionalSystem chamado sem level válido');
         return false;
       }
       
       if (!message || message === null || message === undefined || message === '') {
-        // FASE 0.1: Usar console.warn direto para prevenir loop infinito
+        // Usar console.warn direto para prevenir loop infinito
         console.warn('[LOG] sendLogToProfessionalSystem chamado sem message válido');
         return false;
       }
       
-      // Validar que APP_BASE_URL está disponível (deve estar, pois vem de data attribute)
+      // Validar que APP_BASE_URL está disponível (pode não estar se movido para início)
       if (!window.APP_BASE_URL) {
-        // FASE 0.1: Usar console.error direto para prevenir loop infinito
+        // Usar console.error direto para prevenir loop infinito
         console.error('[LOG] CRITICAL: APP_BASE_URL não está disponível');
         console.error('[LOG] CRITICAL: Verifique se data-app-base-url está definido no script tag no Webflow Footer Code');
         return false;
@@ -572,7 +338,7 @@
         const validLevel = String(level).toUpperCase().trim();
         const validLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL', 'TRACE'];
         if (!validLevels.includes(validLevel)) {
-          // FASE 0.1: Usar console.warn direto para prevenir loop infinito
+          // Usar console.warn direto para prevenir loop infinito
           console.warn('[LOG] Level inválido: ' + level + ' - usando INFO como fallback', { level: level });
           level = 'INFO';
         } else {
@@ -626,7 +392,7 @@
           function_name: callerInfo ? callerInfo.function_name : null
         };
         
-        // Log detalhado no console ANTES de enviar (FASE 0.1: Usar console.log direto para prevenir loop infinito)
+        // Log detalhado no console ANTES de enviar (Usar console.log direto para prevenir loop infinito)
         const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         console.log('[LOG] Enviando log para', endpoint, { requestId: requestId });
         console.log('[LOG] Payload', {
@@ -656,7 +422,7 @@
           credentials: 'omit'
         }).then(response => {
           const fetchDuration = performance.now() - fetchStartTime;
-          // FASE 0.1: Usar console.log direto para prevenir loop infinito
+          // Usar console.log direto para prevenir loop infinito
           console.log('[LOG] Resposta recebida (' + Math.round(fetchDuration) + 'ms)', {
             status: response.status,
             statusText: response.statusText,
@@ -674,7 +440,7 @@
                 errorData = { raw_response: text.substring(0, 500), parse_error: e.message };
               }
               
-              // Log detalhado do erro com todos os dados (FASE 0.1: Usar console.error direto)
+              // Log detalhado do erro com todos os dados (Usar console.error direto)
               console.error('[LOG] Erro HTTP na resposta', {
                 status: response.status,
                 statusText: response.statusText,
@@ -696,7 +462,7 @@
           return response.json();
         }).then(result => {
           const fetchDuration = performance.now() - fetchStartTime;
-          // FASE 0.1: Usar console.log direto para prevenir loop infinito
+          // Usar console.log direto para prevenir loop infinito
           console.log('[LOG] Sucesso (' + Math.round(fetchDuration) + 'ms)', {
             success: result.success,
             log_id: result.log_id,
@@ -710,7 +476,7 @@
           }
         }).catch(error => {
           const fetchDuration = performance.now() - fetchStartTime;
-          // FASE 0.1: Usar console.error direto para prevenir loop infinito
+          // Usar console.error direto para prevenir loop infinito
           console.error('[LOG] Erro ao enviar log (' + Math.round(fetchDuration) + 'ms)', {
             error: error,
             message: error.message,
@@ -726,7 +492,7 @@
         
         return true;
       } catch (error) {
-        // Não quebrar aplicação se logging falhar (FASE 0.1: Usar console.error direto para prevenir loop infinito)
+        // Não quebrar aplicação se logging falhar (Usar console.error direto para prevenir loop infinito)
         console.error('[LOG] Erro ao enviar log', error);
         return false;
       }
@@ -735,27 +501,12 @@
     // Expor função globalmente para uso em outros escopos
     window.sendLogToProfessionalSystem = sendLogToProfessionalSystem;
     
-    // ======================
-    // FUNÇÃO ÚNICA DE LOG CENTRALIZADA - novo_log()
-    // ======================
-    // PROJETO: Unificar Função de Log - Uma Única Função Centralizada
-    // Data: 17/11/2025
-    // Versão: 2.0.0
-    // 
-    // Esta função substitui todas as funções de log existentes:
-    // - logClassified()
-    // - sendLogToProfessionalSystem()
-    // - logUnified()
-    // - logDebug()
-    //
-    // Funcionalidades:
-    // 1. Verifica parametrização (window.shouldLog, window.shouldLogToDatabase, window.shouldLogToConsole)
-    // 2. Verifica DEBUG_CONFIG (compatibilidade com código existente)
-    // 3. Exibe no console (console.log/error/warn) se shouldLogToConsole() retornar true
-    // 4. Envia para banco (sendLogToProfessionalSystem) se shouldLogToDatabase() retornar true
-    // 5. Tratamento de erros silencioso (não quebra aplicação)
-    // 6. Chamada assíncrona para banco (não bloqueia execução)
-    
+    /**
+     * Função única de log centralizada - novo_log()
+     * PROJETO: Unificar Função de Log - Uma Única Função Centralizada
+     * Data: 17/11/2025
+     * Versão: 2.0.0
+     */
     function novo_log(level, category, message, data, context = 'OPERATION', verbosity = 'SIMPLE') {
       try {
         // 1. Verificar parametrização global (window.shouldLog)
@@ -836,7 +587,320 @@
     window.novo_log = novo_log;
     
     // ======================
-    // FIM DAS FUNÇÕES DE LOGGING CENTRALIZADAS
+    // LOG DE CARREGAMENTO DO ARQUIVO
+    // ======================
+    // Logar versão quando arquivo for carregado
+    (function logFileLoad() {
+      try {
+        // Aguardar DOM estar pronto ou executar imediatamente se já estiver
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function() {
+            window.novo_log('INFO', 'FOOTER_CODE', 'FooterCodeSiteDefinitivoCompleto.js carregado', {
+              versao: window.versao || 'não definida',
+              timestamp: new Date().toISOString(),
+              readyState: document.readyState
+            }, 'INIT', 'MEDIUM');
+          });
+        } else {
+          // DOM já está pronto, logar imediatamente
+          window.novo_log('INFO', 'FOOTER_CODE', 'FooterCodeSiteDefinitivoCompleto.js carregado', {
+            versao: window.versao || 'não definida',
+            timestamp: new Date().toISOString(),
+            readyState: document.readyState
+          }, 'INIT', 'MEDIUM');
+        }
+      } catch (error) {
+        // Tratamento de erro silencioso - não quebrar aplicação
+        console.warn('[FOOTER_CODE] Erro ao logar carregamento:', error);
+      }
+    })();
+    
+  } catch (error) {
+    // Tratamento de erro silencioso - não quebrar aplicação se logging falhar
+    console.error('[LOG] Erro ao inicializar sistema de logging:', error);
+  }
+})();
+
+// ======================
+// SENTRY ERROR TRACKING
+// Integração: 27/11/2025
+// Versão: Simplificada - Início do arquivo
+// ======================
+(function initSentryTracking() {
+  'use strict';
+  
+  // Evitar duplicação
+  if (window.SENTRY_INITIALIZED) {
+    return;
+  }
+  
+  // Função helper para detectar ambiente
+  function getEnvironment() {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    // Prioridade 1: Detecção explícita via hostname
+    if (hostname.includes('dev.') || 
+        hostname.includes('localhost') ||
+        hostname.includes('127.0.0.1') ||
+        hostname.includes('-dev.webflow.io') ||
+        hostname.includes('.dev.') ||
+        href.includes('/dev/')) {
+      return 'dev';
+    }
+    
+    // Prioridade 2: Verificar webflow.io (geralmente é DEV)
+    if (hostname.indexOf('webflow.io') !== -1) {
+      return 'dev';
+    }
+    
+    // Prioridade 3: Usar window.APP_ENVIRONMENT se disponível
+    if (typeof window.APP_ENVIRONMENT !== 'undefined' && window.APP_ENVIRONMENT) {
+      return window.APP_ENVIRONMENT === 'dev' ? 'dev' : 'prod';
+    }
+    
+    // Prioridade 4: Usar window.LOG_CONFIG.environment se disponível
+    if (typeof window.LOG_CONFIG !== 'undefined' && window.LOG_CONFIG && window.LOG_CONFIG.environment) {
+      return window.LOG_CONFIG.environment === 'dev' ? 'dev' : 'prod';
+    }
+    
+    // Prioridade 5: Fallback para prod
+    return 'prod';
+  }
+  
+  // Expor função globalmente para testes e debug
+  window.getEnvironment = getEnvironment;
+  
+  // Função centralizada de inicialização
+  function initializeSentry() {
+    if (window.SENTRY_INITIALIZED || typeof Sentry === 'undefined') {
+      return;
+    }
+    
+    try {
+      const environment = getEnvironment();
+      
+      Sentry.init({
+        dsn: "https://9cbeefde9ce7c0b959b51a4c5e6e52dd@o4510432472530944.ingest.de.sentry.io/4510432482361424",
+        environment: environment,
+        tracesSampleRate: 0.1,
+        beforeSend: function(event, hint) {
+          if (event && event.extra) {
+            delete event.extra.ddd;
+            delete event.extra.celular;
+            delete event.extra.cpf;
+            delete event.extra.nome;
+            delete event.extra.email;
+            delete event.extra.phone;
+            delete event.extra.phone_number;
+          }
+          
+          if (event && event.contexts) {
+            if (event.contexts.user) {
+              delete event.contexts.user.email;
+              delete event.contexts.user.phone;
+            }
+          }
+          
+          return event;
+        },
+        ignoreErrors: [
+          'ResizeObserver loop limit exceeded',
+          'Non-Error promise rejection captured',
+          'Script error.',
+          'NetworkError'
+        ]
+      });
+      
+      window.SENTRY_INITIALIZED = true;
+      
+      // Log de inicialização usando novo_log()
+      window.novo_log('INFO', 'SENTRY', 'Sentry inicializado com sucesso', {
+        environment: environment,
+        method: 'simplified_init'
+      }, 'INIT', 'MEDIUM');
+      
+      // Log de status usando novo_log()
+      window.novo_log('INFO', 'SENTRY', 'Status', {
+        carregado: typeof Sentry !== 'undefined',
+        inicializado: window.SENTRY_INITIALIZED,
+        environment: environment,
+        timestamp: new Date().toISOString()
+      }, 'INIT', 'MEDIUM');
+    } catch (sentryError) {
+      // Não quebrar aplicação se Sentry falhar
+      const errorMsg = sentryError.message || 'Erro desconhecido';
+      if (typeof window.novo_log === 'function') {
+        window.novo_log('WARN', 'SENTRY', 'Erro ao inicializar Sentry (não bloqueante)', {
+          error: errorMsg,
+          stack: sentryError.stack
+        }, 'INIT', 'SIMPLE');
+      } else {
+        console.error('[SENTRY] Erro ao inicializar Sentry:', errorMsg);
+      }
+    }
+  }
+  
+  // Se Sentry já está carregado, inicializar diretamente
+  if (typeof Sentry !== 'undefined') {
+    // Log usando novo_log()
+    window.novo_log('INFO', 'SENTRY', 'Sentry já está carregado, inicializando...', null, 'INIT', 'MEDIUM');
+    initializeSentry();
+    return;
+  }
+  
+  // Log usando novo_log()
+  window.novo_log('INFO', 'SENTRY', 'Carregando SDK do Sentry...', null, 'INIT', 'MEDIUM');
+  
+  // Se não está carregado, carregar e inicializar após carregar
+  const script = document.createElement('script');
+  script.src = 'https://js-de.sentry-cdn.com/9cbeefde9ce7c0b959b51a4c5e6e52dd.min.js';
+  script.crossOrigin = 'anonymous';
+  script.async = true;
+  
+  script.onload = function() {
+    // Log usando novo_log()
+    window.novo_log('INFO', 'SENTRY', 'SDK do Sentry carregado com sucesso, inicializando...', null, 'INIT', 'MEDIUM');
+    initializeSentry();
+  };
+  
+  script.onerror = function() {
+    // Não quebrar aplicação se script falhar ao carregar
+    if (typeof window.novo_log === 'function') {
+      window.novo_log('WARN', 'SENTRY', 'Falha ao carregar SDK do Sentry (não bloqueante)', null, 'INIT', 'SIMPLE');
+    } else {
+      console.warn('[SENTRY] Falha ao carregar SDK do Sentry');
+    }
+  };
+  
+  document.head.appendChild(script);
+})();
+
+// ======================
+// TRATAMENTO DE ERRO GLOBAL (Recomendação do Engenheiro)
+// ======================
+(function() {
+  'use strict';
+  
+  try {
+    
+    // ======================
+    // CARREGAMENTO DE VARIÁVEIS DE AMBIENTE (DATA ATTRIBUTES)
+    // ======================
+    // Solução definitiva: ler variáveis do data attribute do próprio script tag
+    // Elimina necessidade de carregamento assíncrono, polling e detecção complexa
+    
+    const currentScript = document.currentScript;
+    
+    // Função helper para ler data attribute e lançar erro se não estiver definido
+    function getRequiredDataAttribute(script, attributeName, displayName) {
+      const value = script && script.dataset ? script.dataset[attributeName] : null;
+      if (value === null || value === undefined || value === '') {
+        const errorMsg = `[CONFIG] ERRO CRÍTICO: ${displayName} não está definido no script tag (data-${attributeName})`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      return value;
+    }
+    
+    // Função helper para ler data attribute boolean
+    function getRequiredBooleanDataAttribute(script, attributeName, displayName) {
+      const value = getRequiredDataAttribute(script, attributeName, displayName);
+      return value === 'true' || value === '1' || value === true;
+    }
+    
+    // Função helper para buscar em todos os scripts (fallback se currentScript não disponível)
+    function findScriptWithAttributes() {
+      const scripts = document.getElementsByTagName('script');
+      for (let script of scripts) {
+        if (script.src && script.src.includes('bssegurosimediato.com.br') && script.dataset) {
+          return script;
+        }
+      }
+      return null;
+    }
+    
+    const scriptElement = currentScript || findScriptWithAttributes();
+    
+    if (!scriptElement || !scriptElement.dataset) {
+      throw new Error('[CONFIG] ERRO CRÍTICO: Script tag não encontrado ou sem data attributes');
+    }
+    
+    // Variáveis obrigatórias (sem fallbacks)
+    // Variáveis injetadas pelo PHP (config_env.js.php) - OBRIGATÓRIAS
+    // Estas variáveis devem ser carregadas ANTES deste script via config_env.js.php
+    if (typeof window.APILAYER_KEY === 'undefined' || !window.APILAYER_KEY) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: APILAYER_KEY não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.SAFETY_TICKET === 'undefined' || !window.SAFETY_TICKET) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETY_TICKET não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.SAFETY_API_KEY === 'undefined' || !window.SAFETY_API_KEY) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETY_API_KEY não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.VIACEP_BASE_URL === 'undefined' || !window.VIACEP_BASE_URL) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: VIACEP_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.APILAYER_BASE_URL === 'undefined' || !window.APILAYER_BASE_URL) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: APILAYER_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.SAFETYMAILS_OPTIN_BASE === 'undefined' || !window.SAFETYMAILS_OPTIN_BASE) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: SAFETYMAILS_OPTIN_BASE não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    if (typeof window.RPA_API_BASE_URL === 'undefined' || !window.RPA_API_BASE_URL) {
+        throw new Error('[CONFIG] ERRO CRÍTICO: RPA_API_BASE_URL não está definido. Carregue config_env.js.php ANTES deste script.');
+    }
+    // SAFETYMAILS_BASE_DOMAIN é opcional (tem fallback 'safetymails.com' na linha 1458)
+    // Apenas garantir que está definida (pode ser string vazia, será tratada com fallback)
+    if (typeof window.SAFETYMAILS_BASE_DOMAIN === 'undefined') {
+        // Definir como string vazia se não estiver definida (fallback será usado quando necessário)
+        window.SAFETYMAILS_BASE_DOMAIN = '';
+    }
+    
+    // Atribuir variáveis do window (já validadas acima)
+    // Nota: Estas variáveis já foram injetadas pelo config_env.js.php, apenas garantimos que estão disponíveis
+    window.APILAYER_KEY = window.APILAYER_KEY;
+    window.SAFETY_TICKET = window.SAFETY_TICKET;
+    window.SAFETY_API_KEY = window.SAFETY_API_KEY;
+    window.VIACEP_BASE_URL = window.VIACEP_BASE_URL;
+    window.APILAYER_BASE_URL = window.APILAYER_BASE_URL;
+    window.SAFETYMAILS_OPTIN_BASE = window.SAFETYMAILS_OPTIN_BASE;
+    window.RPA_API_BASE_URL = window.RPA_API_BASE_URL;
+    window.SAFETYMAILS_BASE_DOMAIN = window.SAFETYMAILS_BASE_DOMAIN;
+    
+    // Variáveis que permanecem via data-attributes (Webflow)
+    window.APP_BASE_URL = getRequiredDataAttribute(scriptElement, 'appBaseUrl', 'APP_BASE_URL');
+    window.APP_ENVIRONMENT = getRequiredDataAttribute(scriptElement, 'appEnvironment', 'APP_ENVIRONMENT');
+    window.rpaEnabled = getRequiredBooleanDataAttribute(scriptElement, 'rpaEnabled', 'rpaEnabled');
+    window.USE_PHONE_API = getRequiredBooleanDataAttribute(scriptElement, 'usePhoneApi', 'USE_PHONE_API');
+    window.VALIDAR_PH3A = getRequiredBooleanDataAttribute(scriptElement, 'validarPh3a', 'VALIDAR_PH3A');
+    window.SUCCESS_PAGE_URL = getRequiredDataAttribute(scriptElement, 'successPageUrl', 'SUCCESS_PAGE_URL');
+    window.WHATSAPP_API_BASE = getRequiredDataAttribute(scriptElement, 'whatsappApiBase', 'WHATSAPP_API_BASE');
+    window.WHATSAPP_PHONE = getRequiredDataAttribute(scriptElement, 'whatsappPhone', 'WHATSAPP_PHONE');
+    window.WHATSAPP_DEFAULT_MESSAGE = getRequiredDataAttribute(scriptElement, 'whatsappDefaultMessage', 'WHATSAPP_DEFAULT_MESSAGE');
+    
+    // ======================
+    // CONFIGURAÇÃO DE LOGGING (MOVIDA PARA O INÍCIO DO ARQUIVO)
+    // ======================
+    // A configuração de logging, sendLogToProfessionalSystem, novo_log() e log de carregamento
+    // foram movidas para o início do arquivo (após window.versao) para garantir disponibilidade
+    // antes de qualquer uso. Ver seção "CONFIGURAÇÃO DE LOGGING E FUNÇÕES CENTRALIZADAS" no início.
+    
+    // Verificar se novo_log() está disponível (deve estar, pois foi movido para o início)
+    if (typeof window.novo_log !== 'function') {
+      console.warn('[CONFIG] novo_log() não está disponível - sistema de logging pode não funcionar corretamente');
+    }
+    
+    // Log de confirmação da configuração (apenas em dev) - usando novo_log se disponível
+    if (window.LOG_CONFIG && window.LOG_CONFIG.environment === 'dev' && typeof window.novo_log === 'function') {
+      window.novo_log('INFO', 'CONFIG', 'Configuração de logging carregada', window.LOG_CONFIG);
+    }
+    
+    // Código removido - movido para o início do arquivo (após window.versao)
+    // Ver seção "CONFIGURAÇÃO DE LOGGING E FUNÇÕES CENTRALIZADAS" no início do arquivo
+    
+    // ======================
+    // FIM DA CONFIGURAÇÃO DE LOGGING (MOVIDA PARA O INÍCIO)
     // ======================
     
     // ======================
@@ -2125,9 +2189,9 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
         try {
           var readyState = document.readyState;
           var executionMode = readyState === 'loading' ? 'via DOMContentLoaded' : 'imediato (DOM já pronto)';
-          novo_log('INFO', 'GCLID', '🚀 executeGCLIDFill() iniciada - Modo: ' + executionMode + ' | readyState: ' + readyState);
+          window.novo_log('INFO', 'GCLID', '🚀 executeGCLIDFill() iniciada - Modo: ' + executionMode + ' | readyState: ' + readyState, null, 'OPERATION', 'MEDIUM');
         } catch (e) {
-          console.log('[GCLID] executeGCLIDFill() iniciada');
+          window.novo_log('INFO', 'GCLID', 'executeGCLIDFill() iniciada', null, 'OPERATION', 'MEDIUM');
         }
         
         // Tentar capturar novamente se não foi capturado antes (FALLBACK)
@@ -2188,9 +2252,9 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
               logMsg += ' (por ID: ' + fieldsById.length + ', por NAME: ' + fieldsByName.length + ')';
             }
             try {
-              novo_log('DEBUG', 'GCLID', logMsg);
+              window.novo_log('INFO', 'GCLID', logMsg, null, 'OPERATION', 'MEDIUM');
             } catch (e) {
-              console.log('[GCLID] ' + logMsg);
+              window.novo_log('INFO', 'GCLID', logMsg, null, 'OPERATION', 'MEDIUM');
             }
             
             if (allFields.length === 0) {
@@ -2312,9 +2376,9 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
                 }
                 
                 try {
-                  novo_log(valuesMatch ? 'INFO' : 'WARN', 'GCLID', confirmationMsg);
+                  window.novo_log(valuesMatch ? 'INFO' : 'WARN', 'GCLID', confirmationMsg, null, 'OPERATION', 'MEDIUM');
                 } catch (e) {
-                  console.log('[GCLID] ' + confirmationMsg);
+                  window.novo_log(valuesMatch ? 'INFO' : 'WARN', 'GCLID', confirmationMsg, null, 'OPERATION', 'MEDIUM');
                 }
                 
                 fieldsFilled++;
@@ -2377,9 +2441,9 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
             });
             if (shouldFill) {
               try {
-                novo_log('DEBUG', 'GCLID', '🔍 MutationObserver detectou campo GCLID_FLD adicionado dinamicamente');
+                window.novo_log('INFO', 'GCLID', 'Campo adicionado dinamicamente detectado', null, 'OPERATION', 'MEDIUM');
               } catch (e) {
-                console.log('[GCLID] Campo adicionado dinamicamente detectado');
+                window.novo_log('INFO', 'GCLID', 'Campo adicionado dinamicamente detectado', null, 'OPERATION', 'MEDIUM');
               }
               fillGCLIDFields();
             }
@@ -2391,9 +2455,9 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
           });
           
           try {
-            novo_log('DEBUG', 'GCLID', '✅ MutationObserver configurado para detectar campos GCLID_FLD dinâmicos');
+            window.novo_log('INFO', 'GCLID', 'MutationObserver configurado', null, 'OPERATION', 'MEDIUM');
           } catch (e) {
-            console.log('[GCLID] MutationObserver configurado');
+            window.novo_log('INFO', 'GCLID', 'MutationObserver configurado', null, 'OPERATION', 'MEDIUM');
           }
         } catch (observerError) {
           // Se MutationObserver não estiver disponível (navegadores muito antigos), continuar sem ele
@@ -2409,17 +2473,17 @@ window.novo_log('ERROR', 'FOOTER', '[FOOTER COMPLETO] Timeout aguardando depend�
       if (document.readyState === 'loading') {
         // DOM ainda está carregando, adicionar listener
         try {
-          novo_log('DEBUG', 'GCLID', '⏳ DOM ainda carregando (readyState: loading) - Adicionando listener DOMContentLoaded');
+          window.novo_log('INFO', 'GCLID', 'DOM ainda carregando - Adicionando listener', null, 'OPERATION', 'MEDIUM');
         } catch (e) {
-          console.log('[GCLID] DOM ainda carregando - Adicionando listener');
+          window.novo_log('INFO', 'GCLID', 'DOM ainda carregando - Adicionando listener', null, 'OPERATION', 'MEDIUM');
         }
         document.addEventListener("DOMContentLoaded", executeGCLIDFill);
       } else {
         // DOM já está pronto, executar imediatamente
         try {
-          novo_log('DEBUG', 'GCLID', '✅ DOM já pronto (readyState: ' + document.readyState + ') - Executando imediatamente');
+          window.novo_log('INFO', 'GCLID', 'DOM já pronto - Executando imediatamente', null, 'OPERATION', 'MEDIUM');
         } catch (e) {
-          console.log('[GCLID] DOM já pronto - Executando imediatamente');
+          window.novo_log('INFO', 'GCLID', 'DOM já pronto - Executando imediatamente', null, 'OPERATION', 'MEDIUM');
         }
         executeGCLIDFill();
       }
@@ -3148,14 +3212,69 @@ window.novo_log('WARN', 'FOOTER', '⚠️ Função SafetyMails não disponível'
               if (!invalido){
                 novo_log('DEBUG', 'DEBUG', '✅ Dados válidos - verificando RPA');
                 
-                // 🎯 CAPTURAR CONVERSÃO GTM - DADOS VÁLIDOS
+                // 🎯 CAPTURAR CONVERSÃO GTM - DADOS VÁLIDOS COM ENHANCED CONVERSIONS
                 window.novo_log('INFO','GTM', '🎯 Registrando conversão - dados válidos');
                 if (typeof window.dataLayer !== 'undefined') {
-                  window.dataLayer.push({
+                  // Formatar telefone para E.164 (+55...) para Enhanced Conversions
+                  let rawPhone = '';
+                  if ($DDD.length && $CEL.length && typeof window.onlyDigits === 'function') {
+                    const dddDigits = window.onlyDigits($DDD.val());
+                    const celDigits = window.onlyDigits($CEL.val());
+                    const combined = dddDigits + celDigits;
+                    
+                    // Validar tamanho (10-11 dígitos) antes de formatar
+                    if (combined.length >= 10 && combined.length <= 11) {
+                      // Se já começa com 55 (código do país), usar como está
+                      if (combined.length === 12 && combined.startsWith('55')) {
+                        rawPhone = '+' + combined;
+                      } else {
+                        // Adicionar prefixo +55 para números brasileiros
+                        rawPhone = '+55' + combined;
+                      }
+                    }
+                  }
+                  
+                  // Coletar email se disponível
+                  const emailValue = ($EMAIL.length && $EMAIL.val()) ? $EMAIL.val().trim() : undefined;
+                  
+                  // Construir objeto user_data para Enhanced Conversions
+                  const userData = {};
+                  if (rawPhone) {
+                    userData.phone_number = rawPhone;
+                  }
+                  if (emailValue) {
+                    userData.email = emailValue;
+                  }
+                  
+                  // Evento GTM com Enhanced Conversions
+                  const gtmEventData = {
                     'event': 'form_submit_valid',
                     'form_type': 'cotacao_seguro',
                     'validation_status': 'valid'
-                  });
+                  };
+                  
+                  // Adicionar user_data apenas se houver dados
+                  if (Object.keys(userData).length > 0) {
+                    gtmEventData.user_data = userData;
+                  }
+                  
+                  window.dataLayer.push(gtmEventData);
+                  
+                  // ✅ LOG ESPECÍFICO PARA ENHANCED CONVERSIONS
+                  if (gtmEventData.user_data && gtmEventData.user_data.phone_number) {
+                    window.novo_log('INFO', 'GTM', '✅ Enhanced Conversions enviado', {
+                      event: gtmEventData.event,
+                      phone_number: gtmEventData.user_data.phone_number,
+                      has_email: !!gtmEventData.user_data.email,
+                      user_data: gtmEventData.user_data
+                    }, 'OPERATION', 'MEDIUM');
+                  } else {
+                    window.novo_log('WARN', 'GTM', '⚠️ Enhanced Conversions não enviado', {
+                      event: gtmEventData.event,
+                      reason: 'user_data ausente ou phone_number não formatado',
+                      has_user_data: !!gtmEventData.user_data
+                    }, 'OPERATION', 'MEDIUM');
+                  }
                 }
                 
                 if (window.rpaEnabled === true) {
@@ -3230,15 +3349,8 @@ window.novo_log('WARN', 'FOOTER', '⚠️ Função SafetyMails não disponível'
                     // Usuário escolheu PROSSEGUIR ASSIM MESMO
                     window.novo_log('INFO','RPA', '🎯 Usuário escolheu prosseguir com dados inválidos');
                     
-                    // 🎯 CAPTURAR CONVERSÃO GTM - USUÁRIO PROSSEGUIU COM DADOS INVÁLIDOS
-                    window.novo_log('INFO','GTM', '🎯 Registrando conversão - usuário prosseguiu com dados inválidos');
-                    if (typeof window.dataLayer !== 'undefined') {
-                      window.dataLayer.push({
-                        'event': 'form_submit_invalid_proceed',
-                        'form_type': 'cotacao_seguro',
-                        'validation_status': 'invalid_proceed'
-                      });
-                    }
+                    // ⚠️ EVENTO REMOVIDO: form_submit_invalid_proceed não é mais necessário
+                    // Apenas conversões válidas são rastreadas para Enhanced Conversions
                     
                     if (window.rpaEnabled === true) {
                       window.novo_log('INFO','RPA', '🎯 RPA habilitado - iniciando processo RPA com dados inválidos');
@@ -3306,15 +3418,8 @@ window.novo_log('WARN', 'FOOTER', '⚠️ Função SafetyMails não disponível'
                   // Usuário escolheu PROSSEGUIR ASSIM MESMO
                   window.novo_log('INFO','RPA', '🎯 Usuário escolheu prosseguir após erro de rede');
                   
-                  // 🎯 CAPTURAR CONVERSÃO GTM - USUÁRIO PROSSEGUIU APÓS ERRO DE REDE
-                  window.novo_log('INFO','GTM', '🎯 Registrando conversão - usuário prosseguiu após erro de rede');
-                  if (typeof window.dataLayer !== 'undefined') {
-                    window.dataLayer.push({
-                      'event': 'form_submit_network_error_proceed',
-                      'form_type': 'cotacao_seguro',
-                      'validation_status': 'network_error_proceed'
-                    });
-                  }
+                  // ⚠️ EVENTO REMOVIDO: form_submit_network_error_proceed não é mais necessário
+                  // Apenas conversões válidas são rastreadas para Enhanced Conversions
                   
                   if (window.rpaEnabled === true) {
                     window.novo_log('INFO','RPA', '🎯 RPA habilitado - iniciando processo RPA após erro de rede');
