@@ -82,6 +82,165 @@
  */
 
 // ======================
+// SENTRY ERROR TRACKING
+// Integração: 27/11/2025
+// Versão: Simplificada - Início do arquivo
+// ======================
+(function initSentryTracking() {
+  'use strict';
+  
+  // Evitar duplicação
+  if (window.SENTRY_INITIALIZED) {
+    return;
+  }
+  
+  // Função helper para detectar ambiente
+  function getEnvironment() {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    // Prioridade 1: Detecção explícita via hostname
+    if (hostname.includes('dev.') || 
+        hostname.includes('localhost') ||
+        hostname.includes('127.0.0.1') ||
+        hostname.includes('-dev.webflow.io') ||
+        hostname.includes('.dev.') ||
+        href.includes('/dev/')) {
+      return 'dev';
+    }
+    
+    // Prioridade 2: Verificar webflow.io (geralmente é DEV)
+    if (hostname.indexOf('webflow.io') !== -1) {
+      return 'dev';
+    }
+    
+    // Prioridade 3: Usar window.APP_ENVIRONMENT se disponível
+    if (typeof window.APP_ENVIRONMENT !== 'undefined' && window.APP_ENVIRONMENT) {
+      return window.APP_ENVIRONMENT === 'dev' ? 'dev' : 'prod';
+    }
+    
+    // Prioridade 4: Usar window.LOG_CONFIG.environment se disponível
+    if (typeof window.LOG_CONFIG !== 'undefined' && window.LOG_CONFIG && window.LOG_CONFIG.environment) {
+      return window.LOG_CONFIG.environment === 'dev' ? 'dev' : 'prod';
+    }
+    
+    // Prioridade 5: Fallback para prod
+    return 'prod';
+  }
+  
+  // Expor função globalmente para testes e debug
+  window.getEnvironment = getEnvironment;
+  
+  // Função centralizada de inicialização
+  function initializeSentry() {
+    if (window.SENTRY_INITIALIZED || typeof Sentry === 'undefined') {
+      return;
+    }
+    
+    try {
+      const environment = getEnvironment();
+      
+      Sentry.init({
+        dsn: "https://9cbeefde9ce7c0b959b51a4c5e6e52dd@o4510432472530944.ingest.de.sentry.io/4510432482361424",
+        environment: environment,
+        tracesSampleRate: 0.1,
+        beforeSend: function(event, hint) {
+          if (event && event.extra) {
+            delete event.extra.ddd;
+            delete event.extra.celular;
+            delete event.extra.cpf;
+            delete event.extra.nome;
+            delete event.extra.email;
+            delete event.extra.phone;
+            delete event.extra.phone_number;
+          }
+          
+          if (event && event.contexts) {
+            if (event.contexts.user) {
+              delete event.contexts.user.email;
+              delete event.contexts.user.phone;
+            }
+          }
+          
+          return event;
+        },
+        ignoreErrors: [
+          'ResizeObserver loop limit exceeded',
+          'Non-Error promise rejection captured',
+          'Script error.',
+          'NetworkError'
+        ]
+      });
+      
+      window.SENTRY_INITIALIZED = true;
+      
+      // Log de inicialização (fallback para console se novo_log não estiver disponível)
+      if (typeof window.novo_log === 'function') {
+        window.novo_log('INFO', 'SENTRY', 'Sentry inicializado com sucesso', {
+          environment: environment,
+          method: 'simplified_init'
+        }, 'INIT', 'SIMPLE');
+      } else {
+        console.log('[SENTRY] Sentry inicializado com sucesso (environment: ' + environment + ')');
+      }
+      
+      // ✅ Console.log para indicar que Sentry foi carregado e inicializado
+      console.log('[SENTRY] Status:', {
+        carregado: typeof Sentry !== 'undefined',
+        inicializado: window.SENTRY_INITIALIZED,
+        environment: environment,
+        timestamp: new Date().toISOString()
+      });
+    } catch (sentryError) {
+      // Não quebrar aplicação se Sentry falhar
+      const errorMsg = sentryError.message || 'Erro desconhecido';
+      if (typeof window.novo_log === 'function') {
+        window.novo_log('WARN', 'SENTRY', 'Erro ao inicializar Sentry (não bloqueante)', {
+          error: errorMsg,
+          stack: sentryError.stack
+        }, 'INIT', 'SIMPLE');
+      } else {
+        console.error('[SENTRY] Erro ao inicializar Sentry:', errorMsg);
+      }
+    }
+  }
+  
+  // Se Sentry já está carregado, inicializar diretamente
+  if (typeof Sentry !== 'undefined') {
+    // ✅ Console.log para indicar que Sentry já está carregado
+    console.log('[SENTRY] Sentry já está carregado, inicializando...');
+    initializeSentry();
+    return;
+  }
+  
+  // ✅ Console.log para indicar que Sentry será carregado
+  console.log('[SENTRY] Carregando SDK do Sentry...');
+  
+  // Se não está carregado, carregar e inicializar após carregar
+  const script = document.createElement('script');
+  script.src = 'https://js-de.sentry-cdn.com/9cbeefde9ce7c0b959b51a4c5e6e52dd.min.js';
+  script.crossOrigin = 'anonymous';
+  script.async = true;
+  
+  script.onload = function() {
+    // ✅ Console.log para indicar que Sentry foi carregado
+    console.log('[SENTRY] SDK do Sentry carregado com sucesso, inicializando...');
+    initializeSentry();
+  };
+  
+  script.onerror = function() {
+    // Não quebrar aplicação se script falhar ao carregar
+    if (typeof window.novo_log === 'function') {
+      window.novo_log('WARN', 'SENTRY', 'Falha ao carregar SDK do Sentry (não bloqueante)', null, 'INIT', 'SIMPLE');
+    } else {
+      console.warn('[SENTRY] Falha ao carregar SDK do Sentry');
+    }
+  };
+  
+  document.head.appendChild(script);
+})();
+
+// ======================
 // TRATAMENTO DE ERRO GLOBAL (Recomendação do Engenheiro)
 // ======================
 (function() {

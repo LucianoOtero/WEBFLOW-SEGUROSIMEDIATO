@@ -1,10 +1,10 @@
 # 📋 ALTERAÇÕES DESDE A ÚLTIMA REPLICAÇÃO PARA PRODUÇÃO
 
 **Data de Criação:** 21/11/2025  
-**Última Atualização:** 23/11/2025  
-**Período:** 16/11/2025 até 23/11/2025  
+**Última Atualização:** 27/11/2025  
+**Período:** 16/11/2025 até 27/11/2025  
 **Última Replicação PROD:** 16/11/2025  
-**Status:** ⏳ **ALTERAÇÕES PENDENTES DE REPLICAÇÃO** (exceto FooterCodeSiteDefinitivoCompleto.js - já deployado)
+**Status:** ⏳ **ALTERAÇÕES PENDENTES DE REPLICAÇÃO** (exceto FooterCodeSiteDefinitivoCompleto.js - correção GCLID já deployado em PROD)
 
 ---
 
@@ -171,6 +171,42 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 - **Backup PROD:** `/var/www/html/prod/root/backups/deploy_footercode_20251123_130756/FooterCodeSiteDefinitivoCompleto.js`
 - **Relatório:** `RELATORIO_DEPLOY_FOOTERCODE_PROD_GCLID_20251123.md`
 
+- **Data:** 27/11/2025 (terceira modificação - correção inicialização Sentry)
+- **Projeto:** Correção de Inicialização do Sentry - Remover Verificação getCurrentHub()
+- **Alterações:**
+  - Removida verificação de `Sentry.getCurrentHub()` que não existe no CDN bundle (linhas 824-842)
+  - Simplificada verificação de inicialização usando apenas `window.SENTRY_INITIALIZED`
+  - Mantido tratamento de erros existente
+  - Mantidos logs existentes
+- **Status:** ✅ Deployado em DEV
+- **Hash SHA256 DEV:** `F450C73A89DDE03E3E43A883F3B0E05C380E7E12B7C25F44B07326E45A3F30AF`
+- **Backup Local:** `02-DEVELOPMENT/FooterCodeSiteDefinitivoCompleto.js.backup_20251127_083912`
+- **Documentação:** `PROJETO_CORRECAO_SENTRY_GETCURRENTHUB_20251126.md`
+- **Auditoria:** `AUDITORIA_PROJETO_CORRECAO_SENTRY_GETCURRENTHUB_20251126.md`
+
+- **Data:** 27/11/2025 (quarta modificação - simplificação e movimentação para início)
+- **Projeto:** Simplificação e Movimentação do Sentry para Início do Arquivo
+- **Alterações:**
+  - **Removido:** Código antigo de inicialização do Sentry (linhas ~685-898)
+  - **Adicionado:** Código simplificado no início do arquivo (após linha ~87)
+  - Simplificada lógica de inicialização (função centralizada `initializeSentry()`)
+  - Adicionados console.log indicando status do Sentry (carregado, inicializado, environment, timestamp)
+  - Resolve race condition identificada
+  - Código executa antes de qualquer outro código
+  - **Código removido:**
+    - Função `initSentryTracking()` completa (linhas ~685-898)
+    - Verificações complexas desnecessárias
+  - **Código adicionado:**
+    - Função `initSentryTracking()` simplificada no início do arquivo
+    - Função centralizada `initializeSentry()` que pode ser chamada de qualquer lugar
+    - Console.log quando Sentry será carregado
+    - Console.log quando Sentry foi carregado
+    - Console.log quando Sentry foi inicializado com status completo
+- **Status:** ✅ Deployado em DEV
+- **Hash SHA256 DEV:** `1FA6FA90A81A80F30F4DD709A4DBE25441434279E64B94498B557E734F638D1B`
+- **Backup Local:** `02-DEVELOPMENT/FooterCodeSiteDefinitivoCompleto.js.backup_20251127_091358`
+- **Documentação:** `PROJETO_SIMPLIFICACAO_SENTRY_INICIO_20251127.md`
+
 #### **2.1.2. `MODAL_WHATSAPP_DEFINITIVO.js`**
 - **Data:** 21/11/2025 (primeira modificação)
 - **Projetos:**
@@ -189,7 +225,7 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 - **Status:** ✅ Deployado em DEV
 
 #### **2.1.3. `webflow_injection_limpo.js`**
-- **Data:** 21/11/2025
+- **Data:** 21/11/2025 (primeira modificação)
 - **Projetos:**
   - Eliminação de Variáveis Hardcoded
   - Mover Parâmetros para Variáveis de Ambiente PHP
@@ -197,6 +233,18 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
   - Removidos fallbacks hardcoded
   - Atualizadas mensagens de erro para refletir que variáveis vêm de `config_env.js.php`
 - **Status:** ✅ Deployado em DEV
+
+- **Data:** 24/11/2025 (segunda modificação - correção mapeamento NOME)
+- **Projeto:** Corrigir Mapeamento de Campo NOME → nome no RPA
+- **Alterações:**
+  - Adicionado mapeamento `'NOME': 'nome'` na função `applyFieldConversions()` (linha ~2684)
+  - Garante compatibilidade com formulários Webflow que enviam `NOME` (maiúsculas)
+  - Mantém compatibilidade retroativa com formulários que enviam `nome` (minúsculas)
+  - Resolve erro "Undefined array key 'nome'" no backend PHP
+- **Status:** ✅ Deployado em DEV
+- **Hash SHA256 DEV:** `53CC20E91EC611260A9186DDAD7DD7BE8DE43685A3C37CAD7D55E47E727C1D14`
+- **Backup Local:** `02-DEVELOPMENT/backups/webflow_injection_limpo.js.backup_20251124_151453`
+- **Documentação:** `PROJETO_CORRIGIR_MAPEAMENTO_NOME_RPA_20251124.md`
 
 ---
 
@@ -345,7 +393,7 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 #### **JavaScript (3 arquivos):**
 - [ ] `FooterCodeSiteDefinitivoCompleto.js` ⚠️ **MODIFICADO** - Múltiplas alterações
 - [ ] `MODAL_WHATSAPP_DEFINITIVO.js`
-- [ ] `webflow_injection_limpo.js`
+- [ ] `webflow_injection_limpo.js` ⚠️ **MODIFICADO** - Mapeamento NOME → nome (24/11/2025)
 
 ### **Configurações PHP-FPM para Replicar:**
 
@@ -442,6 +490,6 @@ Este documento consolida **TODAS** as alterações realizadas no ambiente de des
 
 ---
 
-**Última Atualização:** 21/11/2025  
+**Última Atualização:** 24/11/2025  
 **Próxima Revisão:** Após próxima replicação para PROD
 
